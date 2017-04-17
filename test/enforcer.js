@@ -24,7 +24,7 @@ describe('enforcer', () => {
 
     describe('enforce', () => {
 
-        if (!canProxy) {
+        if (!canProxy.proxiable) {
 
             it('does not support active enforcement', () => {
                 const options = schemas.enforcer.normalize({});
@@ -802,7 +802,17 @@ describe('enforcer', () => {
 
     describe('validate', () => {
 
+        it('validate all', () => {
+            const options = schemas.enforcer.normalize({ enforce: { maximum: false } });
+            const schema = { type: 'number', maximum: 10 };
+            expect(code(() => enforcer(options).validate(schema, 15))).to.equal('ESRNMAX');
+        });
 
+        it('don\'t validate all', () => {
+            const options = schemas.enforcer.normalize({ enforce: { maximum: false }, validateAll: false });
+            const schema = { type: 'number', maximum: 10 };
+            expect(() => enforcer(options).validate(schema, 15)).not.to.throw(Error);
+        });
 
     });
 

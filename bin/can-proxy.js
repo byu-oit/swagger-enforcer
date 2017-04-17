@@ -16,7 +16,7 @@
  **/
 'use strict';
 
-module.exports = (function() {
+exports.proxiable = (function() {
     try {
         new Proxy({}, {});
         return true;

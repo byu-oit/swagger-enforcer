@@ -48,23 +48,22 @@ function Enforcer(options) {
     return factory;
 }
 
-Enforcer.prototype.enforce = canProxy
-    ? function (schema, initial) {
-        const options = this.options;
-        schema = new PreppedSchema(schema, options);
-        if (arguments.length < 2) {
-            if (options.useDefaults && schema.hasOwnProperty('default')) {
-                initial = schema.default;
-            } else if (schema.type === 'array') {
-                initial = applyDefaults(schema, options, []);
-            } else if (schema.type === 'object') {
-                initial = applyDefaults(schema, options, {});
-            }
+Enforcer.prototype.enforce = function (schema, initial) {
+    if (!canProxy.proxiable) error ('Your version of JavaScript does not support proxying.', 'PROX');
+    const options = this.options;
+    schema = new PreppedSchema(schema, options);
+    if (arguments.length < 2) {
+        if (options.useDefaults && schema.hasOwnProperty('default')) {
+            initial = schema.default;
+        } else if (schema.type === 'array') {
+            initial = applyDefaults(schema, options, []);
+        } else if (schema.type === 'object') {
+            initial = applyDefaults(schema, options, {});
         }
-        validate(schema, initial);
-        return getProxy(schema, options, initial);
     }
-    : function () { error('Your version of node (' + process.version + ') does not support active enforcement. Requires version 6.0.0 and newer.', 'PROX'); };
+    validate(schema, initial);
+    return getProxy(schema, options, initial);
+    };
 
 Enforcer.prototype.validate = function (schema, value) {
     let options = this.options;
