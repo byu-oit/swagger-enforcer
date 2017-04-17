@@ -1,4 +1,21 @@
+/**
+ *  @license
+ *    Copyright 2016 Brigham Young University
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ **/
 'use strict';
+const canProxy      = require('../bin/can-proxy');
 const expect        = require('chai').expect;
 const enforcer      = require('../bin/enforcer');
 const schemas       = require('../bin/schemas');
@@ -7,7 +24,7 @@ describe('enforcer', () => {
 
     describe('enforce', () => {
 
-        if (Number(process.version.match(/^v(\d+\.\d+)/)[1]) < 6) {
+        if (!canProxy) {
 
             it('does not support active enforcement', () => {
                 const options = schemas.enforcer.normalize({});
@@ -780,6 +797,12 @@ describe('enforcer', () => {
             });
 
         }
+
+    });
+
+    describe('validate', () => {
+
+
 
     });
 
