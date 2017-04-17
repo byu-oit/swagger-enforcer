@@ -1,8 +1,14 @@
 # Swagger-Enforcer
 
-Automatically validate swagger objects while you build them and/or validate the final object.
+Automatically validate a value against the swagger schema while you build it. Alternatively you can validate the final value.
 
 To validate while building, this package requires support of the [native Proxy interface](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy). For NodeJS that means version 6.4.0 and newer. If your node version is lower than that you can still validate the final object.
+
+## Contents
+
+- [Examples](#examples)
+- [API](#api)
+- [Enforcement Options](#enforcement-options)
 
 ## Examples
 
@@ -75,22 +81,41 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
 
 ## API
 
-### Constructor
+- [Enforcer (Constructor)](#enforcer)
+    - [Enforcer.prototype.enforce](#enforcer-prototype-enforce)
+    - [Enforcer.prototype.validate](#enforcer-prototype-validate)
+- [Enforcer.injectParameters](#enforcer-injectparameters)
+- [Enforcer.is](#enforcer-is-binary) (type checking)
+    - [binary](#enforcer-is-binary)
+    - [boolean](#enforcer-is-boolean)
+    - [byte](#enforcer-is-byte)
+    - [date](#enforcer-is-date)
+    - [dateTime](#enforcer-is-datetime)
+    - [integer](#enforcer-is-integer)
+    - [number](#enforcer-is-number)
+- [Enforcer.same](#enforcer-same)
+- [Enforcer.to](#enforcer-to-binary) (type conversion)
+    - [binary](#enforcer-to-binary)
+    - [boolean](#enforcer-to-boolean)
+    - [byte](#enforcer-to-byte)
+    - [date](#enforcer-to-date)
+    - [dateTime](#enforcer-to-datetime)
+    - [integer](#enforcer-to-integer)
+    - [number](#enforcer-to-number)
 
-#### Enforcer
+### Enforcer
+
+Produce an enforcer instance that can enforce a swagger schema while you build the object and/or that validates the object after it is built.
 
 **Signature:** `Enforcer ([ options ]) : Enforcer`
 
 **Parameters:**
-
-* *schema* - The schema to enforce. It is common to pull this off of the swagger configuration.
 
 * *options* - [Enforcement options](#enforcement-options). Defaults to:
 
     ```
     {
         autoFormat: true,
-        useDefaults: false,
         enforce: {
             enum: true,
             maxItems: true,
@@ -106,29 +131,341 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
             maxProperties: true,
             minProperties: false,
             required: false
-        }
+        },
+        useDefaults: false,
+        validateAll: true
     }
     ```
-    
-* *value* - The initial value to use to build the swagger response. If provided this value will be validated.
 
-**Returns** - The proxied response object. If the schema defines an object or an array then you can treat this just like any other object or array and enforcement will be enacted. Any other schema type defines immutable primitives that cannot be enforced beyond the initial function call, but you can always call the `SwaggerResponse` function again to validate a new primitive value. 
+**Returns** - An enforcer instance with the following prototype methods: [Enforcer.prototype.enforce](#enforcer-prototype-enforce) and [Enforcer.prototype.validate](#enforcer-prototype-validate).
 
-### Static Methods
+[Back to API Table of Contents](#api)
 
-#### injectParameters
+### Enforcer.prototype.enforce
 
-**Signature:** `SwaggerResponse.injectParameters( [ recursive, ] value, parameters)`
+Validate an object while you build it.
+
+**Signature:** `.enforce ( schema [, initial ]) : *`
 
 **Parameters:**
 
-* *recursive* Whether to recursively replace parameters. Only valid for objects and arrays, otherwise ignored. Defaults to `true`.
+* *schema* - The swagger schema to enforce.
+
+* *initial* - An optional value to initialize the enforcement with.
+ 
+**Returns** - A proxied object or array if the schema is for an object or an array. Any modifications to the object or array will automatically be run through a performance optimized validation. If the schema is for a non-object or non-array then the value cannot be proxied.
+
+[Back to API Table of Contents](#api)
+
+### Enforcer.prototype.validate
+
+Validate an object as if it were fully built. If validation fails then an error will be thrown.
+
+**Signature:** `.validate ( schema, value) : undefined`
+
+**Parameters:**
+
+* *schema* - The swagger schema to enforce.
+
+* *initial* - An optional value to initialize the enforcement with.
+ 
+**Returns** - Undefined. If validation fails then an error will be thrown.
+
+[Back to API Table of Contents](#api)
+
+### Enforcer.injectParameters
+
+A static method that will find and replace string parameters with new values.
+
+**Signature:** `Enforcer.injectParameters( value, parameters [, options ]) : undefined`
+
+**Parameters:**
+
+* *value* - The value to begin traversing and looking for strings to replace.
+
+* *parameters* - An objects with keys and values that represent what to replace in each string.
+ 
+* *options* - Configuration options:
+
+    * *replacement* - The replacement method to use. This can be one of `colon`, `doubleHandlebar`, `handlebar`, or a custom `Function`. Defaults to `handlebar`.
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.is.binary
+
+Check to see if a string is an 8-bit binary string consisting only of `0` and `1`.
+
+**Signature:** `Enforcer.is.binary( value ) : boolean`
+
+**Parameters:**
+
+- *value* - The value to test.
+
+**Returns:** `true` if a binary string, otherwise `false`.
+
+```js
+Enforcer.is.binary('00101000');    // true
+```
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.is.boolean
+
+Check to see if a string equals `'true'` or `'false'`.
+
+**Signature:** `Enforcer.is.boolean( value ) : boolean`
+
+**Parameters:**
+
+- *value* - The value to test.
+
+**Returns:** `true` if `'true'` or `'false'`, otherwise `false`.
+
+```js
+Enforcer.is.boolean('true');    // true
+```
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.is.byte
+
+Check to see if a string is a base64 encoded string.
+
+**Signature:** `Enforcer.is.base64( value ) : boolean`
+
+**Parameters:**
+
+- *value* - The value to test.
+
+**Returns:** `true` if a base64 encoded string, otherwise `false`.
+
+```js
+Enforcer.is.byte('aGVsbG8=');    // true
+```
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.is.date
+
+Check to see if a string is a date string.
+
+**Signature:** `Enforcer.is.date( value ) : boolean`
+
+**Parameters:**
+
+- *value* - The value to test.
+
+**Returns:** `true` if a string in the date format `YYYY-MM-DD`, otherwise `false`.
+
+```js
+Enforcer.is.date('2000-01-01');    // true
+```
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.is.dateTime
+
+Check to see if a string is a date-time encoded string.
+
+**Signature:** `Enforcer.is.dateTime( value ) : boolean`
+
+**Parameters:**
+
+- *value* - The value to test.
+
+**Returns:** `true` if a date in ISO string format `YYYY-MM-DDTHH:mm:ss:uuuZ`, otherwise `false`.
+
+```js
+Enforcer.is.dateTime('2000-01-01T00:00:00.000Z');    // true
+```
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.is.integer
+
+Check to see if a string is an integer encoded string.
+
+**Signature:** `Enforcer.is.integer( value ) : boolean`
+
+**Parameters:**
+
+- *value* - The value to test.
+
+**Returns:** `true` if the string is an encoded integer, otherwise `false`.
+
+```js
+Enforcer.is.integer('15');    // true
+```
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.is.number
+
+Check to see if a string is an number encoded string.
+
+**Signature:** `Enforcer.is.number( value ) : boolean`
+
+**Parameters:**
+
+- *value* - The value to test.
+
+**Returns:** `true` if the string is an encoded number, otherwise `false`.
+
+```js
+Enforcer.is.number('15.27');    // true
+```
+
+[Back to API Table of Contents](#api)
+
+### Enforcer.same
+
+Check to see if two values are similar, including the evaluation of objects and arrays.
+
+**Signature:** `Enforcer.is.same( value1, value2 ) : boolean`
+
+**Parameters:**
+
+- *value1* - The first value to compare.
+
+- *value2* - The second value to compare.
+
+**Returns:** `true` if both values are similar, otherwise `false`.
+
+```js
+Enforcer.same({ a: 1, b: 2 }, { b: 2, a: 1 });    // true
+```
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.to.binary
+
+Convert a value into an 8-bit binary string.
+
+**Signature:** `Enforcer.to.binary( value ) : string`
+
+**Parameters:**
+
+- *value* - The value to convert. The value can be a boolean, number, string, or buffer.
+
+**Returns:** An 8-bit binary string.
+
+```js
+Enforcer.to.binary(1);    // '00000001'
+```
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.to.boolean
+
+Convert a value into a boolean.
+
+**Signature:** `Enforcer.to.boolean( value ) : string`
+
+**Parameters:**
+
+- *value* - The value to convert. The value can be of any type.
+
+**Returns:** A boolean.
+
+```js
+Enforcer.to.byte('hello');    // true
+```
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.to.byte
+
+Convert a value into an base64 encoded string.
+
+**Signature:** `Enforcer.to.byte( value ) : string`
+
+**Parameters:**
+
+- *value* - The value to convert. The value can be a boolean, number, string, or buffer.
+
+**Returns:** A base64 encoded string.
+
+```js
+Enforcer.to.byte('hello');    // 'aGVsbG8='
+```
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.to.date
+
+Convert a value into a date encoded string.
+
+**Signature:** `Enforcer.to.date( value ) : string`
+
+**Parameters:**
+
+- *value* - The value to convert. The value can be a Date, number, or string.
+
+**Returns:** A date encoded string of the format `YYYY-MM-DD`.
+
+```js
+Enforcer.to.date(new Date(2000, 0, 0, 0, 0, 0, 0));    // '2000-01-01'
+```
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.to.dateTime
+
+Convert a value into a date encoded string.
+
+**Signature:** `Enforcer.to.dateTime( value ) : string`
+
+**Parameters:**
+
+- *value* - The value to convert. The value can be a Date, number, or string.
+
+**Returns:** A date encoded string of the format `YYYY-MM-DDTHH:mm:ss:uuuZ`.
+
+```js
+Enforcer.to.dateTime(new Date(2000, 0, 0, 0, 0, 0, 0));    // '2000-01-01T00:00:00.000Z'
+```
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.to.integer
+
+Convert a value into an integer.
+
+**Signature:** `Enforcer.to.integer( value ) : string`
+
+**Parameters:**
+
+- *value* - The value to convert. The value can be a boolean, number, or numeric string.
+
+**Returns:** A number that is an integer.
+
+```js
+Enforcer.to.integer('15');    // 15
+```
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.to.number
+
+Convert a value into an number.
+
+**Signature:** `Enforcer.to.number( value ) : string`
+
+**Parameters:**
+
+- *value* - The value to convert. The value can be a boolean, number, or numeric string.
+
+**Returns:** A number.
+
+```js
+Enforcer.to.number('1.23');    // 1.23
+```
+
+[Back to API Table of Contents](#api)
 
 ## Enforcement Options
 
 * *autoFormat* - Whether to attempt to convert any values being set to their appropriate types. For example, if a schema expects a string of format `date-time` and this option is set to `true` then you can set the schema using a `Date` object and that object will automatically be converted to a string in `date-time` format. The advantage of using this is that it means you don't need to explicitly use the [conversion to api](#) but the disadvantage is that it may obscure some errors if the conversion shouldn't have happened.
-
-* *useDefaults* - Whether to use default values to build out the swagger response object automatically, as much as possible. Defaults to `false`.
   
 * *enforce* - The validation rules to enforce while building the response object.
 
@@ -169,3 +506,7 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
     * *minProperties* - Enforce minProperties validation for numbers and integers. Defaults to `false`.
     
     * *required* - Enforce pattern matching. If enabled then any objects being set into the response must already have required values. Defaults to `false`.
+
+* *useDefaults* - Whether to use default values to build out the swagger response object automatically, as much as possible. Defaults to `false`.
+
+* *validateAll* - When `true`, enable all all enforcement rules if validating the final object. Defaults to `true`. 
