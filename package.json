@@ -1,7 +1,7 @@
 {
-  "name": "swagger-response",
-  "version": "0.3.0",
-  "description": "Assisted swagger response generation for objects and arrays, following the swagger definition file.",
+  "name": "swagger-enforcer",
+  "version": "0.0.1",
+  "description": "Automatically validate a value against the swagger schema while you build it. Alternatively you can validate the final value.",
   "main": "index.js",
   "directories": {
     "test": "tests"
@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Gi60s/swagger-response.git"
+    "url": "git+https://github.com/byu-oit-appdev/swagger-enforcer.git"
   },
   "keywords": [
     "swagger",
@@ -24,9 +24,9 @@
   "author": "James Speirs",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/Gi60s/swagger-response/issues"
+    "url": "https://github.com/byu-oit-appdev/swagger-enforcer/issues"
   },
-  "homepage": "https://github.com/Gi60s/swagger-response#readme",
+  "homepage": "https://github.com/byu-oit-appdev/swagger-enforcer#readme",
   "devDependencies": {
     "chai": "^3.5.0",
     "mocha": "^2.4.5",
