@@ -16,18 +16,18 @@
  **/
 'use strict';
 
-module.exports = unproxy;
+module.exports = release;
 
-function unproxy(value) {
+function release(value) {
     const target = value.hasOwnProperty('__swaggerResponseProxyTarget__')
         ? value.__swaggerResponseProxyTarget__
         : value;
 
     if (Array.isArray(target)) {
-        return target.map(unproxy);
+        return target.map(release);
     } else if (target && typeof target === 'object') {
         const copy = {};
-        Object.keys(target).forEach(key => copy[key] = unproxy(target[key]));
+        Object.keys(target).forEach(key => copy[key] = release(target[key]));
     } else {
         return value;
     }
