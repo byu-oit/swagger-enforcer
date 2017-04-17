@@ -86,7 +86,7 @@ exports.dateTime = function(value) {
     const type = typeof value;
     const isString = type === 'string';
 
-    if (isString && rx.time.test(value)) {
+    if (isString && rx.dateTime.test(value)) {
         return new Date(value).toISOString();
 
     } else if (isString && rx.date.test(value)) {
