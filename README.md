@@ -93,6 +93,7 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
     - [dateTime](#enforcer-is-datetime)
     - [integer](#enforcer-is-integer)
     - [number](#enforcer-is-number)
+- [Enforcer.release](#enforcer-release')
 - [Enforcer.same](#enforcer-same)
 - [Enforcer.to](#enforcer-to-binary) (type conversion)
     - [binary](#enforcer-to-binary)
@@ -313,6 +314,25 @@ Check to see if a string is an number encoded string.
 
 ```js
 Enforcer.is.number('15.27');    // true
+```
+
+[Back to API Table of Contents](#api)
+    
+### Enforcer.release
+
+Take an enforced object and get it's equivalent non-enforced object.
+
+**Signature:** `Enforcer.release( value ) : *`
+
+**Parameters:**
+
+- *value* - The value to release from enforcement.
+
+**Returns:** The released value.
+
+```js
+const obj = enforcer.enforce(schema);
+const released = Enforcer.release(obj);
 ```
 
 [Back to API Table of Contents](#api)
