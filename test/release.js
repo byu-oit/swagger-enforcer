@@ -37,6 +37,8 @@ describe('release', () => {
         });
 
         it('released', () => {
+            obj.push(1);
+            obj.push(2);
             const r = release(obj);
             expect(() => r.push('a')).not.to.throw(Error);
         });
