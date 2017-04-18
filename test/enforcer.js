@@ -26,13 +26,28 @@ describe('enforcer', () => {
     describe('enforce', () => {
 
         describe('no proxying', () => {
-            let initial = canProxy.proxiable;
 
             before(() => canProxy.proxiable = false);
-            after(() => canProxy.proxiable = initial);
+            afterEach(() => canProxy.reset());
 
             it('does not support active enforcement', () => {
                 expect(code(() => enforcer(options).enforce({}, {}))).to.equal('ESRPROX');
+            });
+
+            it('force positive', () => {
+                const p = global.Proxy;
+                global.Proxy = function() { };
+                canProxy.reset();
+                expect(canProxy.proxiable).to.be.true;
+                global.Proxy = p;
+            });
+
+            it('force negative', () => {
+                const p = global.Proxy;
+                global.Proxy = function() { throw Error('Not supported') };
+                canProxy.reset();
+                expect(canProxy.proxiable).to.be.false;
+                global.Proxy = p;
             });
 
         });
