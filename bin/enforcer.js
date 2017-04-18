@@ -17,6 +17,7 @@
 'use strict';
 const applyDefaults     = require('./apply-defaults');
 const canProxy          = require('./can-proxy');
+const copy              = require('./copy');
 const PreppedSchema     = require('./prepped-schema');
 const rx                = require('./rx');
 const same              = require('./same');
@@ -54,7 +55,7 @@ Enforcer.prototype.enforce = function (schema, initial) {
     schema = new PreppedSchema(schema, options);
     if (arguments.length < 2) {
         if (options.useDefaults && schema.hasOwnProperty('default')) {
-            initial = schema.default;
+            initial = copy(schema.default);
         } else if (schema.type === 'array') {
             initial = applyDefaults(schema, options, []);
         } else if (schema.type === 'object') {
@@ -63,7 +64,7 @@ Enforcer.prototype.enforce = function (schema, initial) {
     }
     validate(schema, initial);
     return getProxy(schema, options, initial);
-    };
+};
 
 Enforcer.prototype.validate = function (schema, value) {
     let options = this.options;
@@ -316,11 +317,11 @@ function getProxy(schema, options, value) {
 function validate(schema, value) {
     const valueType = typeof value;
 
+    // if no schema then we're done validating-
+    if (!schema || (!schema.type && !schema.enum)) return;
+
     // validate that the value is serializable
     validateSerializable(value);
-
-    // if no schema then we're done validating-
-    if (!schema) return;
 
     // array validation
     if (schema.type === 'array') {
