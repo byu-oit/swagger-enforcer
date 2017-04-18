@@ -24,10 +24,13 @@ function release(value) {
         : value;
 
     if (Array.isArray(target)) {
-        return target.map(release);
+        const copy = [];
+        target.forEach(item => copy.push(release(item)));
+        return copy;
     } else if (target && typeof target === 'object') {
         const copy = {};
         Object.keys(target).forEach(key => copy[key] = release(target[key]));
+        return copy;
     } else {
         return value;
     }
