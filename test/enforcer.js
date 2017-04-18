@@ -21,20 +21,39 @@ const enforcer      = require('../bin/enforcer');
 const schemas       = require('../bin/schemas');
 
 describe('enforcer', () => {
+    const options = schemas.enforcer.normalize({});
 
     describe('enforce', () => {
 
-        if (!canProxy.proxiable) {
+        describe('no proxying', () => {
+            let initial = canProxy.proxiable;
+
+            before(() => canProxy.proxiable = false);
+            after(() => canProxy.proxiable = initial);
 
             it('does not support active enforcement', () => {
-                const options = schemas.enforcer.normalize({});
-                expect(code(() => enforcer(options).enforce({}, {}))).to.equal('ESRPROXY');
+                expect(code(() => enforcer(options).enforce({}, {}))).to.equal('ESRPROX');
             });
 
-        } else {
+        });
+
+        if (canProxy.proxiable) {
+
+            describe('defaults', () => {
+
+                it('primitive without default', () => {
+                    expect(enforcer(options).enforce({})).to.be.undefined;
+                });
+
+                it('has default', () => {
+                    const options = schemas.enforcer.normalize({ useDefaults: true });
+                    const schema = { default: 'abc' };
+                    expect(enforcer(options).enforce(schema)).to.equal('abc');
+                });
+
+            });
 
             describe('array', () => {
-                const options = schemas.enforcer.normalize({});
                 const schema = {
                     type: 'array',
                     items: {
@@ -663,15 +682,6 @@ describe('enforcer', () => {
 
             });
 
-            describe('primitives', () => {
-                const options = schemas.enforcer.normalize({});
-
-                it('no initial value', () => {
-                    expect(code(() => enforcer(options).enforce({}))).to.equal('ESRTYPE');
-                });
-
-            });
-
             describe('number', () => {
                 const options = schemas.enforcer.normalize({});
 
@@ -797,6 +807,10 @@ describe('enforcer', () => {
             });
 
         }
+
+        it('options not provided does not throw error', () => {
+            expect(() => enforcer()).not.to.throw(Error);
+        });
 
     });
 
