@@ -19,9 +19,7 @@
 module.exports = release;
 
 function release(value) {
-    const target = value.hasOwnProperty('__swaggerResponseProxyTarget__')
-        ? value.__swaggerResponseProxyTarget__
-        : value;
+    const target = value.__swaggerResponseProxyTarget__ || value;
 
     if (Array.isArray(target)) {
         const copy = [];

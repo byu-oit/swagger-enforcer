@@ -21,7 +21,7 @@ const enforcer      = require('../bin/enforcer');
 const schemas       = require('../bin/schemas');
 
 describe('enforcer', () => {
-    const options = schemas.enforcer.normalize({});
+    const options = schemas.enforcer.normalize({ autoFormat: false });
 
     describe('enforce', () => {
 
@@ -345,7 +345,7 @@ describe('enforcer', () => {
                         expect(code(() => ar.splice(1, 0, 3, 4))).to.equal('ESRLEN');
                     });
 
-                    it('can add and remove withing min and max items', () => {
+                    it('can add and remove within min and max items', () => {
                         const schema = { type: 'array', minItems: 2, maxItems: 2 };
                         const options = schemas.enforcer.normalize({ enforce: { minItems: true } });
                         const ar = enforcer(options).enforce(schema, [1, 2]);
@@ -468,7 +468,6 @@ describe('enforcer', () => {
             });
 
             describe('object', () => {
-                const options = schemas.enforcer.normalize({});
 
                 it('no initial value', () => {
                     const schema = { type: 'object' };
@@ -683,7 +682,6 @@ describe('enforcer', () => {
             });
 
             describe('number', () => {
-                const options = schemas.enforcer.normalize({});
 
                 it('valid below maximum', () => {
                     const schema = { type: 'number', maximum: 10 };
@@ -758,7 +756,6 @@ describe('enforcer', () => {
             });
 
             describe('string', () => {
-                const options = schemas.enforcer.normalize({});
 
                 it('valid max length', () => {
                     const schema = { type: 'string', maxLength: 3 };
@@ -793,7 +790,6 @@ describe('enforcer', () => {
             });
 
             describe('enum', () => {
-                const options = schemas.enforcer.normalize({});
                 const schema = { enum: ['a']};
 
                 it('found', () => {
@@ -807,6 +803,55 @@ describe('enforcer', () => {
             });
 
         }
+
+        describe('auto format', () => {
+            const options = schemas.enforcer.normalize({});
+
+            it('object', () => {
+                const v = enforcer(options).enforce({ type: 'object' }, {});
+                expect(v).to.deep.equal({});
+            });
+
+            it('boolean', () => {
+                const v = enforcer(options).enforce({ type: 'boolean' }, '');
+                expect(v).to.equal(false);
+            });
+
+            it('integer', () => {
+                const v = enforcer(options).enforce({ type: 'integer' }, '1.2');
+                expect(v).to.equal(1);
+            });
+
+            it('number', () => {
+                const v = enforcer(options).enforce({ type: 'number' }, '1.2');
+                expect(v).to.equal(1.2);
+            });
+
+            it('binary', () => {
+                const v = enforcer(options).enforce({ type: 'string', format: 'binary' }, 1);
+                expect(v).to.equal('00000001');
+            });
+
+            it('byte', () => {
+                const v = enforcer(options).enforce({ type: 'string', format: 'byte' }, true);
+                expect(v).to.equal('AQ==');
+            });
+
+            it('date', () => {
+                const str = '2000-01-01T00:00:00.000Z';
+                const date = new Date(str);
+                const v = enforcer(options).enforce({ type: 'string', format: 'date' }, date);
+                expect(v).to.equal(str.substr(0, 10));
+            });
+
+            it('dateTime', () => {
+                const str = '2000-01-01T00:00:00.000Z';
+                const date = new Date(str);
+                const v = enforcer(options).enforce({ type: 'string', format: 'date-time' }, date);
+                expect(v).to.equal(str);
+            });
+
+        });
 
         it('options not provided does not throw error', () => {
             expect(() => enforcer()).not.to.throw(Error);
