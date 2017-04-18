@@ -2,7 +2,7 @@
 
 Automatically validate a value against the swagger schema while you build it. Alternatively you can validate the final value.
 
-To validate while building, this package requires support of the [native Proxy interface](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy). For NodeJS that means version 6.0.0 and newer. If your node version is lower than that you can still validate the final object.
+To validate while building ([enforce](#enforcer-prototype-enforce)), this package requires support of the [native Proxy interface](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy). For NodeJS that means version 6.0.0 and newer. If your node version is lower than that you can still validate the final object ([validate](#enforcer-prototype-validate)).
 
 ## Contents
 
@@ -12,7 +12,7 @@ To validate while building, this package requires support of the [native Proxy i
 
 ## Examples
 
-**Validate While Building**
+**Validate While Building ([enforce](#enforcer-prototype-enforce))**
 
 ```js
 const Enforcer = require('swagger-enforcer');
@@ -44,7 +44,7 @@ obj.num = 5;            // validates successfully and value is set
 obj.str = 'abc';        // throws an error because 'abc' is not in enum
 ```
 
-**Validate the Final Object**
+**Validate the Final Object ([validate](#enforcer-prototype-validate))**
 
 ```js
 const Enforcer = require('swagger-enforcer');
