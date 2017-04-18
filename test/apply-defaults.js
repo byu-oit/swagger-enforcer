@@ -175,6 +175,12 @@ describe('apply defaults', () => {
             expect(o).to.deep.equal({ obj1: { a: 1 }});
         });
 
+        it('object is a copy', () => {
+            const schema = { default: {} };
+            const o = applyDefaults(schema, options);
+            expect(o).not.to.equal(schema.default);
+        });
+
         describe('mixed nested defaults', () => {
             const schema = {
                 type: 'object',
