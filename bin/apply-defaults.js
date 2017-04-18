@@ -15,6 +15,7 @@
  *    limitations under the License.
  **/
 'use strict';
+const copy          = require('./copy');
 
 module.exports = function(schema, options, value) {
     return applyDefaults.apply(null, arguments).value;
@@ -27,7 +28,7 @@ function applyDefaults(schema, options, value) {
         if (valueNotProvided && schema.hasOwnProperty('default')) {
             return {
                 applied: true,
-                value: schema.default
+                value: copy(schema.default)
             };
 
         } else if (schema.type === 'array') {
