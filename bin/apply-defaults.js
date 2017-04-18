@@ -79,7 +79,7 @@ function applyDefaults(schema, options, value) {
                 Object.keys(result)
                     .forEach(property => {
                         if (!properties.hasOwnProperty(property)) {
-                            const data = applyDefaults(property, options, result[property]);
+                            const data = applyDefaults(schema.additionalProperties, options, result[property]);
                             if (data.applied) {
                                 result[property] = data.value;
                                 setDefault = true;
