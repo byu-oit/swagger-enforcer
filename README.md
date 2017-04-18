@@ -2,7 +2,7 @@
 
 Automatically validate a value against the swagger schema while you build it. Alternatively you can validate the final value.
 
-To validate while building ([enforce](#enforcer-prototype-enforce)), this package requires support of the [native Proxy interface](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy). For NodeJS that means version 6.0.0 and newer. If your node version is lower than that you can still validate the final object ([validate](#enforcer-prototype-validate)).
+To validate while building ([enforce](#enforcerprototypeenforce)), this package requires support of the [native Proxy interface](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy). For NodeJS that means version 6.0.0 and newer. If your node version is lower than that you can still validate the final object ([validate](#enforcerprototypevalidate)).
 
 ## Contents
 
@@ -12,7 +12,7 @@ To validate while building ([enforce](#enforcer-prototype-enforce)), this packag
 
 ## Examples
 
-**Validate While Building ([enforce](#enforcer-prototype-enforce))**
+**Validate While Building ([enforce](#enforcerprototypeenforce))**
 
 ```js
 const Enforcer = require('swagger-enforcer');
@@ -44,7 +44,7 @@ obj.num = 5;            // validates successfully and value is set
 obj.str = 'abc';        // throws an error because 'abc' is not in enum
 ```
 
-**Validate the Final Object ([validate](#enforcer-prototype-validate))**
+**Validate the Final Object ([validate](#enforcerprototypevalidate))**
 
 ```js
 const Enforcer = require('swagger-enforcer');
@@ -82,27 +82,27 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
 ## API
 
 - [Enforcer (Constructor)](#enforcer)
-    - [Enforcer.prototype.enforce](#enforcer-prototype-enforce)
-    - [Enforcer.prototype.validate](#enforcer-prototype-validate)
+    - [Enforcer.prototype.enforce](#enforcerprototypeenforce)
+    - [Enforcer.prototype.validate](#enforcerprototypevalidate)
 - [Enforcer.injectParameters](#enforcer-injectparameters)
-- [Enforcer.is](#enforcer-is-binary) (type checking)
-    - [binary](#enforcer-is-binary)
-    - [boolean](#enforcer-is-boolean)
-    - [byte](#enforcer-is-byte)
-    - [date](#enforcer-is-date)
-    - [dateTime](#enforcer-is-datetime)
-    - [integer](#enforcer-is-integer)
-    - [number](#enforcer-is-number)
-- [Enforcer.release](#enforcer-release')
-- [Enforcer.same](#enforcer-same)
-- [Enforcer.to](#enforcer-to-binary) (type conversion)
-    - [binary](#enforcer-to-binary)
-    - [boolean](#enforcer-to-boolean)
-    - [byte](#enforcer-to-byte)
-    - [date](#enforcer-to-date)
-    - [dateTime](#enforcer-to-datetime)
-    - [integer](#enforcer-to-integer)
-    - [number](#enforcer-to-number)
+- [Enforcer.is](#enforcerisbinary) (type checking)
+    - [binary](#enforcerisbinary)
+    - [boolean](#enforcerisboolean)
+    - [byte](#enforcerisbyte)
+    - [date](#enforcerisdate)
+    - [dateTime](#enforcerisdatetime)
+    - [integer](#enforcerisinteger)
+    - [number](#enforcerisnumber)
+- [Enforcer.release](#enforcerrelease')
+- [Enforcer.same](#enforcersame)
+- [Enforcer.to](#enforcertobinary) (type conversion)
+    - [binary](#enforcertobinary)
+    - [boolean](#enforcertoboolean)
+    - [byte](#enforcertobyte)
+    - [date](#enforcertodate)
+    - [dateTime](#enforcertodatetime)
+    - [integer](#enforcertointeger)
+    - [number](#enforcertonumber)
 
 ### Enforcer
 
@@ -138,7 +138,7 @@ Produce an enforcer instance that can enforce a swagger schema while you build t
     }
     ```
 
-**Returns** - An enforcer instance with the following prototype methods: [Enforcer.prototype.enforce](#enforcer-prototype-enforce) and [Enforcer.prototype.validate](#enforcer-prototype-validate).
+**Returns** - An enforcer instance with the following prototype methods: [Enforcer.prototype.enforce](#enforcerprototypeenforce) and [Enforcer.prototype.validate](#enforcerprototypevalidate).
 
 [Back to API Table of Contents](#api)
 
@@ -485,7 +485,7 @@ Enforcer.to.number('1.23');    // 1.23
 
 ## Enforcement Options
 
-* *autoFormat* - Whether to attempt to convert any values being set to their appropriate types. For example, if a schema expects a string of format `date-time` and this option is set to `true` then you can set the schema using a `Date` object and that object will automatically be converted to a string in `date-time` format. The advantage of using this is that it means you don't need to explicitly use the [conversion to api](#) but the disadvantage is that it may obscure some errors if the conversion shouldn't have happened.
+* *autoFormat* - Whether to attempt to convert any values being set to their appropriate types. For example, if a schema expects a string of format `date-time` and this option is set to `true` then you can set the schema using a `Date` object and that object will automatically be converted to a string in `date-time` format. The advantage of using this is that it means you don't need to explicitly use the [conversion to api](#enforcertobinary) but the disadvantage is that it may obscure some errors if the conversion shouldn't have happened.
   
 * *enforce* - The validation rules to enforce while building the response object.
 
