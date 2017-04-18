@@ -61,6 +61,32 @@ describe('apply defaults', () => {
             expect(o.foo).to.equal('bar');
         });
 
+        it('object with null provided', () => {
+            const schema = {
+                type: 'object',
+                default: {}
+            };
+            const o = applyDefaults(schema, options, null);
+            expect(o).to.be.null;
+        });
+
+        it('object with additional properties', () => {
+            const schema = {
+                type: 'object',
+                additionalProperties: {
+                    type: 'object',
+                    properties: {
+                        num: {
+                            type: 'number',
+                            default: 0
+                        }
+                    }
+                }
+            };
+            const o = applyDefaults(schema, options, { foo: { num: 1 }, bar: {} });
+            expect(o).to.deep.equal({ foo: { num: 1 }, bar: { num: 0 } });
+        });
+
         it('array', () => {
             const schema = {
                 type: 'array',
@@ -87,6 +113,18 @@ describe('apply defaults', () => {
             };
             const ar = applyDefaults(schema, options, [{}, { b: 2 }]);
             expect(ar).to.deep.equal([{ a: 1 }, { a: 1, b: 2 }]);
+        });
+
+        it('array without item schema', () => {
+            const schema = { type: 'array' };
+            const ar = applyDefaults(schema, options, [{}, 'a']);
+            expect(ar).to.deep.equal([{}, 'a']);
+        });
+
+        it('array item schema without defaults', () => {
+            const schema = { type: 'array', items: {} };
+            const ar = applyDefaults(schema, options, [{}, 'a']);
+            expect(ar).to.deep.equal([{}, 'a']);
         });
 
         it('partial object', () => {
