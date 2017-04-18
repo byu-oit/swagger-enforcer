@@ -62,6 +62,7 @@ Enforcer.prototype.enforce = function (schema, initial) {
             initial = applyDefaults(schema, options, {});
         }
     }
+    initial = autoFormat(schema, options, initial);
     validate(schema, initial);
     return getProxy(schema, options, initial);
 };
@@ -94,6 +95,7 @@ function arrayProxy(schema, options, initial) {
 
                 case 'concat': return function(value) {
                     applySomeDefaults(arguments, 0);
+                    applySomeAutoFormats(arguments, 0);
                     const ar = target.concat.apply(target, arguments);
                     validateItems(ar, arguments, 0);
                     validateMaxMinArrayLength(schema, ar.length);
@@ -108,6 +110,7 @@ function arrayProxy(schema, options, initial) {
 
                 case 'fill': return function(value, start, end) {
                     if (schema.items) {
+                        value = autoFormat(schema, options, value);
                         validateItem(target, value);
                         arguments[0] = getProxy(schema.items, options, value);
                     }
@@ -124,6 +127,7 @@ function arrayProxy(schema, options, initial) {
                 case 'map': return function(callback, thisArg) {
                     const ar = target.map.apply(target, arguments);
                     applySomeDefaults(ar, 0);
+                    applySomeAutoFormats(ar, 0);
                     validate(schema, ar);
                     return arrayProxy(schema, options, ar);
                 };
@@ -134,6 +138,8 @@ function arrayProxy(schema, options, initial) {
                 };
 
                 case 'push': return function(value) {
+                    applySomeDefaults(arguments, 0);
+                    applySomeAutoFormats(arguments, 0);
                     validateItems(target, arguments, 0);
                     validateLength(target.length + arguments.length);
                     setItemProxies(arguments, 0);
@@ -148,12 +154,14 @@ function arrayProxy(schema, options, initial) {
                 case 'slice': return function(begin, end) {
                     const ar = target.slice.apply(target, arguments);
                     applySomeDefaults(ar, 0);
+                    applySomeAutoFormats(ar, 0);
                     validate(schema, ar);
                     return arrayProxy(schema, options, ar);
                 };
 
                 case 'splice': return function(start, deleteCount, item) {
                     applySomeDefaults(arguments, 2);
+                    applySomeAutoFormats(arguments, 2);
                     validateItems(target, arguments, 2);
                     validateLength(target.length + arguments.length - 2 - (deleteCount || 0));
                     setItemProxies(arguments, 2);
@@ -162,6 +170,8 @@ function arrayProxy(schema, options, initial) {
                 };
 
                 case 'unshift': return function() {
+                    applySomeDefaults(arguments, 0);
+                    applySomeAutoFormats(arguments, 0);
                     validateItems(target, arguments, 0);
                     validateLength(target.length + arguments.length);
                     setItemProxies(arguments, 0);
@@ -175,6 +185,7 @@ function arrayProxy(schema, options, initial) {
             if (rx.integer.test(property)) {
                 const index = parseInt(property);
                 if (index > target.length) validateLength(index + 1);
+                value = autoFormat(schema, options, value);
                 validateItem(target, value);
                 target[property] = schema.items ? getProxy(schema.items, options, value) : value;
             } else {
@@ -195,10 +206,22 @@ function arrayProxy(schema, options, initial) {
         }
     }
 
+    function applySomeAutoFormats(args, start) {
+        if (options.autoFormat) {
+            const length = args.length;
+            for (let i = start; i < length; i++) {
+                args[i] = autoFormat(schema.items, options, args[i]);
+            }
+        }
+    }
+
     function setItemProxies(args, start) {
         if (schema.items) {
             const length = args.length;
-            for (let i = start; i < length; i++) args[i] = getProxy(schema.items, options, args[i]);
+            for (let i = start; i < length; i++) {
+                const value = autoFormat(schema, options, args[i]);
+                args[i] = getProxy(schema.items, options, value);
+            }
         }
     }
 
@@ -241,6 +264,7 @@ function objectProxy(schema, options, initial) {
         },
         set: function(target, property, value) {
             value = applyDefaults(schema, options, value);
+            value = autoFormat(schema, options, value);
             validateSerializable(value);
             validateLength(target, property, true);
             validateObjectProperty(schema, property, value);
@@ -266,6 +290,23 @@ function objectProxy(schema, options, initial) {
 
 
 
+function autoFormat(schema, options, value) {
+    if (schema && options.autoFormat) {
+        switch (schema.type) {
+            case 'boolean': return to.boolean(value);
+            case 'integer': return to.integer(value);
+            case 'number':  return to.number(value);
+            case 'string':
+                switch (schema.format) {
+                    case 'binary':      return to.binary(value);
+                    case 'byte':        return to.byte(value);
+                    case 'date':        return to.date(value);
+                    case 'date-time':   return to.dateTime(value);
+                }
+        }
+    }
+    return value;
+}
 
 /**
  * Get a deep proxy for a value.
@@ -278,7 +319,9 @@ function getProxy(schema, options, value) {
     if (schema.type === 'array') {
         if (schema.items) {
             const length = value.length;
-            for (let i = 0; i < length; i++) value[i] = getProxy(schema.items, options, value[i]);
+            for (let i = 0; i < length; i++) {
+                value[i] = getProxy(schema.items, options, autoFormat(schema, options, value[i]));
+            }
         }
         return arrayProxy(schema, options, value);
 
@@ -287,23 +330,9 @@ function getProxy(schema, options, value) {
         Object.keys(value)
             .forEach(key => {
                 const useSchema = specifics[key] || schema.additionalProperties || null;
-                if (useSchema) value[key] = getProxy(useSchema, options, value[key]);
+                if (useSchema) value[key] = getProxy(useSchema, options, autoFormat(schema, options, value[key]));
             });
         return objectProxy(schema, options, value);
-
-    } else if (options.autoFormat) {
-        switch (schema.type) {
-            case 'boolean': return to.boolean(value);
-            case 'integer': return to.integer(value);
-            case 'number': return to.number(value);
-            case 'string':
-                switch (schema.format) {
-                    case 'binary': return to.binary(value);
-                    case 'byte': return to.byte(value);
-                    case 'date': return to.date(value);
-                    case 'date-time': return to.dateTime(value);
-                }
-        }
     }
 
     return value;
