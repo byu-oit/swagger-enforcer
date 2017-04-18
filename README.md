@@ -211,9 +211,9 @@ const params = {
     when: 'today'
 }
 
-Enforcer.injectParameters(o, params);
+const x = Enforcer.injectParameters(o, params);
 
-console.log(o.foo);         // 'Bob is 25 years old today'
+console.log(x.foo);         // 'Bob is 25 years old today'
 ```
 
 [Back to API Table of Contents](#api)
