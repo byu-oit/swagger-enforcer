@@ -12,6 +12,8 @@ To validate while building ([enforce](#enforcerprototypeenforce)), this package 
 
 ## Examples
 
+#### Example 1
+
 **Validate While Building ([enforce](#enforcerprototypeenforce))**
 
 ```js
@@ -43,6 +45,8 @@ console.log(obj);       // because 'str' had a default value: { str: 'foo' }
 obj.num = 5;            // validates successfully and value is set
 obj.str = 'abc';        // throws an error because 'abc' is not in enum
 ```
+
+#### Example 2
 
 **Validate the Final Object ([validate](#enforcerprototypevalidate))**
 
@@ -86,7 +90,7 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
     - [Enforcer.prototype.validate](#enforcerprototypevalidate)
 - [Enforcer.injectParameters](#enforcer-injectparameters)
 - [Enforcer.is](#enforcerisbinary) (type checking)
-    - [binary](#enforcerisbinary)
+    - [binary](#enforceris)
     - [boolean](#enforcerisboolean)
     - [byte](#enforcerisbyte)
     - [date](#enforcerisdate)
@@ -95,7 +99,7 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
     - [number](#enforcerisnumber)
 - [Enforcer.release](#enforcerrelease')
 - [Enforcer.same](#enforcersame)
-- [Enforcer.to](#enforcertobinary) (type conversion)
+- [Enforcer.to](#enforcerto) (type conversion)
     - [binary](#enforcertobinary)
     - [boolean](#enforcertoboolean)
     - [byte](#enforcertobyte)
@@ -156,6 +160,8 @@ Validate an object while you build it.
  
 **Returns** - A proxied object or array if the schema is for an object or an array. Any modifications to the object or array will automatically be run through a performance optimized validation. If the schema is for a non-object or non-array then the value cannot be proxied.
 
+**Example** - [See Example 1](#example-1)
+
 [Back to API Table of Contents](#api)
 
 ### Enforcer.prototype.validate
@@ -171,6 +177,8 @@ Validate an object as if it were fully built. If validation fails then an error 
 * *initial* - An optional value to initialize the enforcement with.
  
 **Returns** - Undefined. If validation fails then an error will be thrown.
+
+**Example** - [See Example 2](#example-2)
 
 [Back to API Table of Contents](#api)
 
@@ -189,10 +197,40 @@ A static method that will find and replace string parameters with new values.
 * *options* - Configuration options:
 
     * *replacement* - The replacement method to use. This can be one of `colon`, `doubleHandlebar`, `handlebar`, or a custom `Function`. Defaults to `handlebar`.
+    
+**Example**
+
+```js
+const o = {
+    foo: '{name} is {age} years old {when}'
+};
+
+const params = {
+    name: 'Bob',
+    age: 25,
+    when: 'today'
+}
+
+Enforcer.injectParameters(o, params);
+
+console.log(o.foo);         // 'Bob is 25 years old today'
+```
 
 [Back to API Table of Contents](#api)
+
+### Enforcer.is
+
+A group of static methods that determine if a value falls into one of several categories.
+
+- [binary](#enforcerisbinary)
+- [boolean](#enforcerisboolean)
+- [byte](#enforcerisbyte)
+- [date](#enforcerisdate)
+- [dateTime](#enforcerisdatetime)
+- [integer](#enforcerisinteger)
+- [number](#enforcerisnumber)
     
-### Enforcer.is.binary
+#### Enforcer.is.binary
 
 Check to see if a string is an 8-bit binary string consisting only of `0` and `1`.
 
@@ -210,7 +248,7 @@ Enforcer.is.binary('00101000');    // true
 
 [Back to API Table of Contents](#api)
     
-### Enforcer.is.boolean
+#### Enforcer.is.boolean
 
 Check to see if a string equals `'true'` or `'false'`.
 
@@ -228,7 +266,7 @@ Enforcer.is.boolean('true');    // true
 
 [Back to API Table of Contents](#api)
     
-### Enforcer.is.byte
+#### Enforcer.is.byte
 
 Check to see if a string is a base64 encoded string.
 
@@ -246,7 +284,7 @@ Enforcer.is.byte('aGVsbG8=');    // true
 
 [Back to API Table of Contents](#api)
     
-### Enforcer.is.date
+#### Enforcer.is.date
 
 Check to see if a string is a date string.
 
@@ -264,7 +302,7 @@ Enforcer.is.date('2000-01-01');    // true
 
 [Back to API Table of Contents](#api)
     
-### Enforcer.is.dateTime
+#### Enforcer.is.dateTime
 
 Check to see if a string is a date-time encoded string.
 
@@ -282,7 +320,7 @@ Enforcer.is.dateTime('2000-01-01T00:00:00.000Z');    // true
 
 [Back to API Table of Contents](#api)
     
-### Enforcer.is.integer
+#### Enforcer.is.integer
 
 Check to see if a string is an integer encoded string.
 
@@ -300,7 +338,7 @@ Enforcer.is.integer('15');    // true
 
 [Back to API Table of Contents](#api)
     
-### Enforcer.is.number
+#### Enforcer.is.number
 
 Check to see if a string is an number encoded string.
 
@@ -356,8 +394,20 @@ Enforcer.same({ a: 1, b: 2 }, { b: 2, a: 1 });    // true
 ```
 
 [Back to API Table of Contents](#api)
+
+### Enforcer.to
+
+A group of static methods that can be used to convert values into their acceptable swagger type equivalents.
+
+- [binary](#enforcertobinary)
+- [boolean](#enforcertoboolean)
+- [byte](#enforcertobyte)
+- [date](#enforcertodate)
+- [dateTime](#enforcertodatetime)
+- [integer](#enforcertointeger)
+- [number](#enforcertonumber)
     
-### Enforcer.to.binary
+#### Enforcer.to.binary
 
 Convert a value into an 8-bit binary string.
 
@@ -375,7 +425,7 @@ Enforcer.to.binary(1);    // '00000001'
 
 [Back to API Table of Contents](#api)
     
-### Enforcer.to.boolean
+#### Enforcer.to.boolean
 
 Convert a value into a boolean.
 
@@ -393,7 +443,7 @@ Enforcer.to.byte('hello');    // true
 
 [Back to API Table of Contents](#api)
     
-### Enforcer.to.byte
+#### Enforcer.to.byte
 
 Convert a value into an base64 encoded string.
 
@@ -411,7 +461,7 @@ Enforcer.to.byte('hello');    // 'aGVsbG8='
 
 [Back to API Table of Contents](#api)
     
-### Enforcer.to.date
+#### Enforcer.to.date
 
 Convert a value into a date encoded string.
 
@@ -429,7 +479,7 @@ Enforcer.to.date(new Date(2000, 0, 0, 0, 0, 0, 0));    // '2000-01-01'
 
 [Back to API Table of Contents](#api)
     
-### Enforcer.to.dateTime
+#### Enforcer.to.dateTime
 
 Convert a value into a date encoded string.
 
@@ -447,7 +497,7 @@ Enforcer.to.dateTime(new Date(2000, 0, 0, 0, 0, 0, 0));    // '2000-01-01T00:00:
 
 [Back to API Table of Contents](#api)
     
-### Enforcer.to.integer
+#### Enforcer.to.integer
 
 Convert a value into an integer.
 
@@ -465,7 +515,7 @@ Enforcer.to.integer('15');    // 15
 
 [Back to API Table of Contents](#api)
     
-### Enforcer.to.number
+#### Enforcer.to.number
 
 Convert a value into an number.
 
