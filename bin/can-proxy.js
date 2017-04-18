@@ -16,11 +16,17 @@
  **/
 'use strict';
 
-exports.proxiable = (function() {
+exports.proxiable = detect();
+
+exports.reset = function() {
+    exports.proxiable = detect();
+};
+
+function detect() {
     try {
         new Proxy({}, {});
         return true;
     } catch (e) {
         return false;
     }
-})();
+}
