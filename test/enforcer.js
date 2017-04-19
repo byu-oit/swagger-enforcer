@@ -21,7 +21,7 @@ const enforcer      = require('../bin/enforcer');
 const schemas       = require('../bin/schemas');
 
 describe('enforcer', () => {
-    const options = schemas.enforcer.normalize({ autoFormat: false });
+    const options = schemas.enforcer.normalize();
 
     describe('enforce', () => {
 
@@ -820,7 +820,7 @@ describe('enforcer', () => {
         }
 
         describe('auto format', () => {
-            const options = schemas.enforcer.normalize({});
+            const options = schemas.enforcer.normalize({ autoFormat: true });
 
             it('object', () => {
                 const v = enforcer(options).enforce({ type: 'object' }, {});
