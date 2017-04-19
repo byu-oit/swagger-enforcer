@@ -19,10 +19,10 @@ To validate while building ([enforce](#enforcerprototypeenforce)), this package 
 ```js
 const Enforcer = require('swagger-enforcer');
 
-// create enforcer instance
+// create enforcer instance that defines which rules to enforce
 const enforcer = Enforcer({ useDefaults: true });
 
-// the schema to enforce
+// a schema to enforce
 const schema = {
     type: 'object',
     properties: {
@@ -53,10 +53,10 @@ obj.str = 'abc';        // throws an error because 'abc' is not in enum
 ```js
 const Enforcer = require('swagger-enforcer');
 
-// create enforcer instance
+// create enforcer instance that defines which rules to enforce
 const enforcer = Enforcer({ useDefaults: true });
 
-// the schema to enforce
+// a schema to enforce
 const schema = {
     type: 'object',
     properties: {
@@ -86,10 +86,10 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
 ## API
 
 - [Enforcer (Constructor)](#enforcer)
-    - [Enforcer.prototype.enforce](#enforcerprototypeenforce)
-    - [Enforcer.prototype.validate](#enforcerprototypevalidate)
-- [Enforcer.injectParameters](#enforcer-injectparameters)
-- [Enforcer.is](#enforcerisbinary) (type checking)
+    - [Enforcer.prototype.enforce](#enforcerprototypeenforce) - Create an object with enforcement.
+    - [Enforcer.prototype.validate](#enforcerprototypevalidate) - Run a full validation of an value.
+- [Enforcer.injectParameters](#enforcer-injectparameters) - Replace string parameters.
+- [Enforcer.is](#enforcerisbinary) - Type checking.
     - [binary](#enforceris)
     - [boolean](#enforcerisboolean)
     - [byte](#enforcerisbyte)
@@ -97,9 +97,9 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
     - [dateTime](#enforcerisdatetime)
     - [integer](#enforcerisinteger)
     - [number](#enforcerisnumber)
-- [Enforcer.release](#enforcerrelease')
-- [Enforcer.same](#enforcersame)
-- [Enforcer.to](#enforcerto) (type conversion)
+- [Enforcer.release](#enforcerrelease') - Create an unenforced copy of an enforced object.
+- [Enforcer.same](#enforcersame) - Check if two values are equivalent.
+- [Enforcer.to](#enforcerto) - Type conversion.
     - [binary](#enforcertobinary)
     - [boolean](#enforcertoboolean)
     - [byte](#enforcertobyte)
@@ -120,7 +120,7 @@ Produce an enforcer instance that can enforce a swagger schema while you build t
 
     ```
     {
-        autoFormat: true,
+        autoFormat: false,
         enforce: {
             enum: true,
             maxItems: true,
@@ -209,7 +209,7 @@ const params = {
     name: 'Bob',
     age: 25,
     when: 'today'
-}
+};
 
 const x = Enforcer.injectParameters(o, params);
 
@@ -369,8 +369,31 @@ Take an enforced object and get it's equivalent non-enforced object.
 **Returns:** The released value.
 
 ```js
-const obj = enforcer.enforce(schema);
-const released = Enforcer.release(obj);
+const Enforcer = require('swagger-enforcer');
+
+const enforcer = Enforcer();
+
+const schema = {
+    type: 'array',
+    items: {
+        type: 'number'
+    }
+};
+
+const array = enforcer.enforce(schema, []);
+
+try {
+    // throws an error because the item is not a string
+    array.push('a');   
+} catch (e) {
+    console.error(e.stack);
+}
+
+// release the enforcement
+const released = Enforcer.release(array);
+
+// no error thrown
+released.push('a');
 ```
 
 [Back to API Table of Contents](#api)
@@ -535,7 +558,7 @@ Enforcer.to.number('1.23');    // 1.23
 
 ## Enforcement Options
 
-* *autoFormat* - Whether to attempt to convert any values being set to their appropriate types. For example, if a schema expects a string of format `date-time` and this option is set to `true` then you can set the schema using a `Date` object and that object will automatically be converted to a string in `date-time` format. The advantage of using this is that it means you don't need to explicitly use the [conversion to api](#enforcertobinary) but the disadvantage is that it may obscure some errors if the conversion shouldn't have happened.
+* *autoFormat* - Whether to attempt to convert any values being set to their appropriate types. For example, if a schema expects a string of format `date-time` and this option is set to `true` then you can set the schema using a `Date` object and that object will automatically be converted to a string in `date-time` format. The advantage of using this is that it means you don't need to explicitly use the [conversion to api](#enforcerto) but the disadvantage is that it may obscure some errors if the conversion shouldn't have happened. Defaults to `false`,
   
 * *enforce* - The validation rules to enforce while building the response object.
 
