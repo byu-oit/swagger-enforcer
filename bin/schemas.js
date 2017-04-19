@@ -38,9 +38,9 @@ exports.enforcer = Typed({
     type: Object,
     default: {},
     properties: {
-        autoFormat: {
+        autoFormat: {           // defaults to false to more strictly validate input
             type: Boolean,
-            default: true
+            default: false
         },
         enforce: {
             type: Object,
@@ -79,7 +79,7 @@ exports.enforcer = Typed({
                     type: Boolean,
                     default: true
                 },
-                minItems: {
+                minItems: {             // defaults to false because you're likely building the array and the initial number of items may be too low
                     type: Boolean,
                     default: false
                 },
@@ -97,11 +97,11 @@ exports.enforcer = Typed({
                     type: Boolean,
                     default: true
                 },
-                minProperties: {
+                minProperties: {        // defaults to false because you're likely building the object and the initial number of properties may be too low
                     type: Boolean,
                     default: false
                 },
-                required: {
+                required: {             // defaults to false because as you're building you may not have added all properties
                     type: Boolean,
                     default: false
                 },
