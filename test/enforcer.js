@@ -765,7 +765,7 @@ describe('enforcer', () => {
 
                 it('invalid integer', () => {
                     const schema = { type: 'integer' };
-                    expect(code(() => enforcer(options).enforce(schema, 5.5))).to.equal('ESENINT');
+                    expect(code(() => enforcer(options).enforce(schema, 5.5))).to.equal('ESETYPE');
                 });
 
             });
@@ -880,6 +880,12 @@ describe('enforcer', () => {
             const options = schemas.enforcer.normalize({ enforce: { maximum: false } });
             const schema = { type: 'number', maximum: 10 };
             expect(code(() => enforcer(options).validate(schema, 15))).to.equal('ESENMAX');
+        });
+
+        it('validate all multiple errors', () => {
+            const options = schemas.enforcer.normalize({ enforce: { maximum: false } });
+            const schema = { type: 'number', maximum: 10, multipleOf: 2 };
+            expect(code(() => enforcer(options).validate(schema, 15))).to.equal('ESEMLTI');
         });
 
         it('don\'t validate all', () => {
