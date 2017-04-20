@@ -87,6 +87,7 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
 
 - [Enforcer (Constructor)](#enforcer)
     - [Enforcer.prototype.enforce](#enforcerprototypeenforce) - Create an object with enforcement.
+    - [Enforcer.prototype.errors](#enforcerprototypeerrors) - Run a full validation of an value and get back an array of Error objects.
     - [Enforcer.prototype.validate](#enforcerprototypevalidate) - Run a full validation of an value.
 - [Enforcer.injectParameters](#enforcer-injectparameters) - Replace string parameters.
 - [Enforcer.is](#enforcerisbinary) - Type checking.
@@ -112,7 +113,7 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
 
 Produce an enforcer instance that can enforce a swagger schema while you build the object and/or that validates the object after it is built.
 
-**Signature:** `Enforcer ([ options ]) : Enforcer`
+**Signature:** `Enforcer ([ options [, definitions ] ]) : Enforcer`
 
 **Parameters:**
 
@@ -141,6 +142,39 @@ Produce an enforcer instance that can enforce a swagger schema while you build t
         validateAll: true
     }
     ```
+* *definitions* - An object containing definitions by name. This is only necessary if using discriminators.
+
+    ```js
+    const definitions = {
+        Pet: {
+            type: 'object',
+            discriminator: 'petType',
+            properties: {
+                name: {
+                    type: 'string'
+                },
+                petType: {
+                    type: 'string'
+                }
+            },
+            required: ['name', 'petType']
+        },
+        Cat: {
+            type: 'object',
+            properties: {
+                name: {
+                    type: 'string'
+                },
+                petType: {
+                    type: 'string'
+                },
+                huntingSkill: {
+                    type: string
+                }
+            }
+        }
+    }
+    ```
 
 **Returns** - An enforcer instance with the following prototype methods: [Enforcer.prototype.enforce](#enforcerprototypeenforce) and [Enforcer.prototype.validate](#enforcerprototypevalidate).
 
@@ -164,17 +198,33 @@ Validate an object while you build it.
 
 [Back to API Table of Contents](#api)
 
-### Enforcer.prototype.validate
+### Enforcer.prototype.errors
 
-Validate an object as if it were fully built. If validation fails then an error will be thrown.
+Validate an object as if it were fully built. An array is returned with any errors that were encountered.
 
-**Signature:** `.validate ( schema, value) : undefined`
+**Signature:** `.errors ( schema, value ) : Error[]`
 
 **Parameters:**
 
 * *schema* - The swagger schema to enforce.
 
-* *initial* - An optional value to initialize the enforcement with.
+* *initial* - An value to validate.
+ 
+**Returns** - An array of Error objects.
+
+[Back to API Table of Contents](#api)
+
+### Enforcer.prototype.validate
+
+Validate an object as if it were fully built. If validation fails then an error will be thrown.
+
+**Signature:** `.validate ( schema, value ) : undefined`
+
+**Parameters:**
+
+* *schema* - The swagger schema to enforce.
+
+* *initial* - An value to validate.
  
 **Returns** - Undefined. If validation fails then an error will be thrown.
 
