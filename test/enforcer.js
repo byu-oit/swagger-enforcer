@@ -31,7 +31,7 @@ describe('enforcer', () => {
             afterEach(() => canProxy.reset());
 
             it('does not support active enforcement', () => {
-                expect(code(() => enforcer(options).enforce({}, {}))).to.equal('ESRPROX');
+                expect(code(() => enforcer(options).enforce({}, {}))).to.equal('ESEPROX');
             });
 
             it('force positive', () => {
@@ -97,12 +97,12 @@ describe('enforcer', () => {
                     });
 
                     it('not an array', () => {
-                        expect(code(() => enforcer(options).enforce(schema, {}))).to.equal('ESRTYPE');
+                        expect(code(() => enforcer(options).enforce(schema, {}))).to.equal('ESETYPE');
                     });
 
                     it('invalid items', () => {
                         const c = code(() => enforcer(options).enforce(schema, ['1']));
-                        expect(c).to.equal('ESRTYPE');
+                        expect(c).to.equal('ESETYPE');
                     });
 
                 });
@@ -123,7 +123,7 @@ describe('enforcer', () => {
 
                     it('invalid', () => {
                         const ar = enforcer(options).enforce(schema, []);
-                        expect(code(() => ar[0] = '1')).to.equal('ESRTYPE');
+                        expect(code(() => ar[0] = '1')).to.equal('ESETYPE');
                     });
 
                     it('valid past current length', () => {
@@ -135,7 +135,7 @@ describe('enforcer', () => {
                     it('invalid past max length', () => {
                         const schema = { type: 'array', maxItems: 1 };
                         const ar = enforcer(options).enforce(schema, []);
-                        expect(code(() => ar[1] = 1)).to.equal('ESRLEN');
+                        expect(code(() => ar[1] = 1)).to.equal('ESELEN');
                     });
 
                     it('schemaless items', () => {
@@ -157,7 +157,7 @@ describe('enforcer', () => {
 
                     it('invalid', () => {
                         const ar = enforcer(options).enforce(schema, []);
-                        expect(code(() => ar.concat('1'))).to.equal('ESRTYPE');
+                        expect(code(() => ar.concat('1'))).to.equal('ESETYPE');
                     });
 
                     it('returns new proxy', () => {
@@ -255,7 +255,7 @@ describe('enforcer', () => {
 
                     it('cannot pop at min items', () => {
                         const ar = enforcer(options).enforce(schema, [1]);
-                        expect(code(() => ar.pop())).to.equal('ESRLEN');
+                        expect(code(() => ar.pop())).to.equal('ESELEN');
                     });
 
                 });
@@ -270,7 +270,7 @@ describe('enforcer', () => {
 
                     it('invalid', () => {
                         const ar = enforcer(options).enforce(schema, []);
-                        expect(code(() => ar.push('1'))).to.equal('ESRTYPE');
+                        expect(code(() => ar.push('1'))).to.equal('ESETYPE');
                     });
 
                     it('returns new length', () => {
@@ -281,7 +281,7 @@ describe('enforcer', () => {
                     it('cannot push at max items', () => {
                         const schema = { type: 'array', maxItems: 0 };
                         const ar = enforcer(options).enforce(schema, []);
-                        expect(code(() => ar.push(1))).to.equal('ESRLEN');
+                        expect(code(() => ar.push(1))).to.equal('ESELEN');
                     });
 
                 });
@@ -299,7 +299,7 @@ describe('enforcer', () => {
 
                     it('cannot shift at min items', () => {
                         const ar = enforcer(options).enforce(schema, [1]);
-                        expect(code(() => ar.shift())).to.equal('ESRLEN');
+                        expect(code(() => ar.shift())).to.equal('ESELEN');
                     });
 
                 });
@@ -344,20 +344,20 @@ describe('enforcer', () => {
 
                     it('invalid new values', () => {
                         const ar = enforcer(options).enforce(schema, [1, 2]);
-                        expect(code(() => ar.splice(1, 0, '3'))).to.equal('ESRTYPE');
+                        expect(code(() => ar.splice(1, 0, '3'))).to.equal('ESETYPE');
                     });
 
                     it('cannot remove below min items', () => {
                         const schema = { type: 'array', minItems: 1 };
                         const options = schemas.enforcer.normalize({ enforce: { minItems: true } });
                         const ar = enforcer(options).enforce(schema, [1, 2]);
-                        expect(code(() => ar.splice(1, 2))).to.equal('ESRLEN');
+                        expect(code(() => ar.splice(1, 2))).to.equal('ESELEN');
                     });
 
                     it('cannot add above max items', () => {
                         const schema = { type: 'array', maxItems: 3 };
                         const ar = enforcer(options).enforce(schema, [1, 2]);
-                        expect(code(() => ar.splice(1, 0, 3, 4))).to.equal('ESRLEN');
+                        expect(code(() => ar.splice(1, 0, 3, 4))).to.equal('ESELEN');
                     });
 
                     it('can add and remove within min and max items', () => {
@@ -381,7 +381,7 @@ describe('enforcer', () => {
 
                     it('invalid', () => {
                         const ar = enforcer(options).enforce(schema, []);
-                        expect(code(() => ar.unshift('1'))).to.equal('ESRTYPE');
+                        expect(code(() => ar.unshift('1'))).to.equal('ESETYPE');
                     });
 
                     it('returns new length', () => {
@@ -392,7 +392,7 @@ describe('enforcer', () => {
                     it('cannot unshift at max items', () => {
                         const schema = { type: 'array', maxItems: 0 };
                         const ar = enforcer(options).enforce(schema, []);
-                        expect(code(() => ar.unshift(1))).to.equal('ESRLEN');
+                        expect(code(() => ar.unshift(1))).to.equal('ESELEN');
                     });
 
                 });
@@ -408,7 +408,7 @@ describe('enforcer', () => {
                     };
 
                     it('init unique', () => {
-                        expect(code(() => enforcer(options).enforce(schema, [1, 2, 1]))).to.equal('ESRUNIQ');
+                        expect(code(() => enforcer(options).enforce(schema, [1, 2, 1]))).to.equal('ESEUNIQ');
                     });
 
                     it('can add unique', () => {
@@ -457,13 +457,13 @@ describe('enforcer', () => {
                     };
 
                     it('enforces init value', () => {
-                        expect(code(() => enforcer(options).enforce(schema, [['a']]))).to.equal('ESRTYPE');
+                        expect(code(() => enforcer(options).enforce(schema, [['a']]))).to.equal('ESETYPE');
                     });
 
                     it('enforces push value', () => {
                         const ar = enforcer(options).enforce(schema, [[]]);
                         ar.push([1]);
-                        expect(code(() => ar.push(['a']))).to.equal('ESRTYPE');
+                        expect(code(() => ar.push(['a']))).to.equal('ESETYPE');
                     });
 
                     it('proxies inner init', () => {
@@ -491,7 +491,7 @@ describe('enforcer', () => {
 
                 it('not a valid object', () => {
                     const schema = { type: 'object' };
-                    expect(code(() => enforcer(options).enforce(schema, []))).to.equal('ESRTYPE');
+                    expect(code(() => enforcer(options).enforce(schema, []))).to.equal('ESETYPE');
                 });
 
                 describe('proxy', () => {
@@ -526,13 +526,13 @@ describe('enforcer', () => {
                     it('cannot delete below minProperties', () => {
                         const schema = { type: 'object', minProperties: 1 };
                         const o = enforcer(options).enforce(schema, { foo: 1 });
-                        expect(code(() => delete o.foo)).to.equal('ESRLEN');
+                        expect(code(() => delete o.foo)).to.equal('ESELEN');
                     });
 
                     it('cannot add above maxProperties', () => {
                         const schema = { type: 'object', maxProperties: 1 };
                         const o = enforcer(options).enforce(schema, { foo: 1 });
-                        expect(code(() => o.bar = 5)).to.equal('ESRLEN');
+                        expect(code(() => o.bar = 5)).to.equal('ESELEN');
                     });
 
                     it('can set at maxProperties', () => {
@@ -558,7 +558,7 @@ describe('enforcer', () => {
 
                     it('invalid specific property', () => {
                         const o = enforcer(options).enforce(schema);
-                        expect(code(() => o.foo = 123)).to.equal('ESRTYPE');
+                        expect(code(() => o.foo = 123)).to.equal('ESETYPE');
                     });
 
                     it('valid additional property', () => {
@@ -568,7 +568,7 @@ describe('enforcer', () => {
 
                     it('invalid additional property', () => {
                         const o = enforcer(options).enforce(schema);
-                        expect(code(() => o.baz = 'abc')).to.equal('ESRTYPE');
+                        expect(code(() => o.baz = 'abc')).to.equal('ESETYPE');
                     });
 
                 });
@@ -578,7 +578,7 @@ describe('enforcer', () => {
 
                     it('top level omitted', () => {
                         const schema = { type: 'object', properties: { foo: { required: true } } };
-                        expect(code(() => enforcer(options).enforce(schema, {}))).to.equal('ESRREQ');
+                        expect(code(() => enforcer(options).enforce(schema, {}))).to.equal('ESEREQ');
                     });
 
                     it('nested top level omitted', () => {
@@ -597,7 +597,7 @@ describe('enforcer', () => {
                         };
 
                         const o = enforcer(options).enforce(schema);
-                        expect(code(() => o.foo = {})).to.equal('ESRREQ');
+                        expect(code(() => o.foo = {})).to.equal('ESEREQ');
                     });
 
                     it('additionalProperties', () => {
@@ -615,13 +615,13 @@ describe('enforcer', () => {
 
                         const o = enforcer(options).enforce(schema);
                         o.abc = { id: 'abc' };
-                        expect(code(() => o.def = {})).to.equal('ESRREQ');
+                        expect(code(() => o.def = {})).to.equal('ESEREQ');
                     });
 
                     it('cannot delete required property', () => {
                         const schema = { type: 'object', properties: { foo: { required: true } } };
                         const o = enforcer(options).enforce(schema, { foo: 1 });
-                        expect(code(() => delete o.foo)).to.equal('ESRREQ');
+                        expect(code(() => delete o.foo)).to.equal('ESEREQ');
                     });
 
                     it('set all of', () => {
@@ -639,7 +639,7 @@ describe('enforcer', () => {
                             { properties: { foo: { type: 'string' } } }
                         ]};
                         const o = enforcer(options).enforce(schema, { foo: 'a' });
-                        expect(code(() => delete o.foo)).to.equal('ESRREQ');
+                        expect(code(() => delete o.foo)).to.equal('ESEREQ');
                     });
 
                 });
@@ -660,7 +660,7 @@ describe('enforcer', () => {
                     });
 
                     it('non serializable value', () => {
-                        expect(code(() => enforcer(options).enforce(schema, { a: function() {} }))).to.equal('ESRTYPE');
+                        expect(code(() => enforcer(options).enforce(schema, { a: function() {} }))).to.equal('ESETYPE');
                     });
 
                 });
@@ -674,12 +674,12 @@ describe('enforcer', () => {
 
                     it('string invalid', () => {
                         const schema = { type: 'object', properties: { foo: { type: 'string' } } };
-                        expect(code(() => enforcer(options).enforce(schema, { foo: 1 }))).to.equal('ESRTYPE');
+                        expect(code(() => enforcer(options).enforce(schema, { foo: 1 }))).to.equal('ESETYPE');
                     });
 
                     it('unknown property', () => {
                         const schema = { type: 'object', properties: {} };
-                        expect(code(() => enforcer(options).enforce(schema, { foo: 'hello' }))).to.equal('ESRNPER');
+                        expect(code(() => enforcer(options).enforce(schema, { foo: 'hello' }))).to.equal('ESENPER');
                     });
 
                     it('additional property valid', () => {
@@ -689,7 +689,7 @@ describe('enforcer', () => {
 
                     it('additional property invalid', () => {
                         const schema = { type: 'object', additionalProperties: { type: 'string' } };
-                        expect(code(() => enforcer(options).enforce(schema, { foo: 1 }))).to.equal('ESRTYPE');
+                        expect(code(() => enforcer(options).enforce(schema, { foo: 1 }))).to.equal('ESETYPE');
                     });
 
                 });
@@ -710,17 +710,17 @@ describe('enforcer', () => {
 
                 it('invalid above maximum', () => {
                     const schema = { type: 'number', maximum: 10 };
-                    expect(code(() => enforcer(options).enforce(schema, 15))).to.equal('ESRNMAX');
+                    expect(code(() => enforcer(options).enforce(schema, 15))).to.equal('ESENMAX');
                 });
 
                 it('invalid above exclusive maximum', () => {
                     const schema = { type: 'number', maximum: 10, exclusiveMaximum: true };
-                    expect(code(() => enforcer(options).enforce(schema, 15))).to.equal('ESRNMAX');
+                    expect(code(() => enforcer(options).enforce(schema, 15))).to.equal('ESENMAX');
                 });
 
                 it('invalid at exclusive maximum', () => {
                     const schema = { type: 'number', maximum: 10, exclusiveMaximum: true };
-                    expect(code(() => enforcer(options).enforce(schema, 10))).to.equal('ESRNMAX');
+                    expect(code(() => enforcer(options).enforce(schema, 10))).to.equal('ESENMAX');
                 });
 
                 it('valid above minimum', () => {
@@ -735,17 +735,17 @@ describe('enforcer', () => {
 
                 it('invalid below minimum', () => {
                     const schema = { type: 'number', minimum: 10 };
-                    expect(code(() => enforcer(options).enforce(schema, 5))).to.equal('ESRNMIN');
+                    expect(code(() => enforcer(options).enforce(schema, 5))).to.equal('ESENMIN');
                 });
 
                 it('invalid below exclusive minimum', () => {
                     const schema = { type: 'number', minimum: 10, exclusiveMinimum: true };
-                    expect(code(() => enforcer(options).enforce(schema, 5))).to.equal('ESRNMIN');
+                    expect(code(() => enforcer(options).enforce(schema, 5))).to.equal('ESENMIN');
                 });
 
                 it('invalid at exclusive minimum', () => {
                     const schema = { type: 'number', minimum: 10, exclusiveMinimum: true };
-                    expect(code(() => enforcer(options).enforce(schema, 10))).to.equal('ESRNMIN');
+                    expect(code(() => enforcer(options).enforce(schema, 10))).to.equal('ESENMIN');
                 });
 
                 it('valid multiple of', () => {
@@ -755,7 +755,7 @@ describe('enforcer', () => {
 
                 it('invalid multiple of', () => {
                     const schema = { type: 'number', multipleOf: 10 };
-                    expect(code(() => enforcer(options).enforce(schema, 5))).to.equal('ESRNMULT');
+                    expect(code(() => enforcer(options).enforce(schema, 5))).to.equal('ESENMULT');
                 });
 
                 it('valid integer', () => {
@@ -765,7 +765,7 @@ describe('enforcer', () => {
 
                 it('invalid integer', () => {
                     const schema = { type: 'integer' };
-                    expect(code(() => enforcer(options).enforce(schema, 5.5))).to.equal('ESRNINT');
+                    expect(code(() => enforcer(options).enforce(schema, 5.5))).to.equal('ESENINT');
                 });
 
             });
@@ -779,7 +779,7 @@ describe('enforcer', () => {
 
                 it('invalid max length', () => {
                     const schema = { type: 'string', maxLength: 3 };
-                    expect(code(() => enforcer(options).enforce(schema, 'abcd'))).to.equal('ESRSMAX');
+                    expect(code(() => enforcer(options).enforce(schema, 'abcd'))).to.equal('ESESMAX');
                 });
 
                 it('valid min length', () => {
@@ -789,7 +789,7 @@ describe('enforcer', () => {
 
                 it('invalid min length', () => {
                     const schema = { type: 'string', minLength: 3 };
-                    expect(code(() => enforcer(options).enforce(schema, 'a'))).to.equal('ESRSMIN');
+                    expect(code(() => enforcer(options).enforce(schema, 'a'))).to.equal('ESESMIN');
                 });
 
                 it('valid pattern', () => {
@@ -799,7 +799,7 @@ describe('enforcer', () => {
 
                 it('invalid pattern', () => {
                     const schema = { type: 'string', pattern: '^[abc]$' };
-                    expect(code(() => enforcer(options).enforce(schema, 'd'))).to.equal('ESRSPAT');
+                    expect(code(() => enforcer(options).enforce(schema, 'd'))).to.equal('ESESPAT');
                 });
 
             });
@@ -812,7 +812,7 @@ describe('enforcer', () => {
                 });
 
                 it('not found', () => {
-                    expect(code(() => enforcer(options).enforce(schema, 'b'))).to.equal('ESRENUM');
+                    expect(code(() => enforcer(options).enforce(schema, 'b'))).to.equal('ESEENUM');
                 });
 
             });
@@ -879,7 +879,7 @@ describe('enforcer', () => {
         it('validate all', () => {
             const options = schemas.enforcer.normalize({ enforce: { maximum: false } });
             const schema = { type: 'number', maximum: 10 };
-            expect(code(() => enforcer(options).validate(schema, 15))).to.equal('ESRNMAX');
+            expect(code(() => enforcer(options).validate(schema, 15))).to.equal('ESENMAX');
         });
 
         it('don\'t validate all', () => {
