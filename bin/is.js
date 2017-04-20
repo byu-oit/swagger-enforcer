@@ -17,16 +17,16 @@
 'use strict';
 const rx        = require('./rx');
 
-exports.byte = rx.byte.test;
+exports.byte = v => rx.byte.test(v);
 
-exports.binary = rx.binary.test;
+exports.binary = v => rx.binary.test(v);
 
-exports.boolean = rx.boolean.test;
+exports.boolean = v => rx.boolean.test(v);
 
-exports.date = rx.date.test;
+exports.date = v => rx.date.test(v);
 
-exports.dateTime = rx.dateTime.test;
+exports.dateTime = v => rx.dateTime.test(v);
 
-exports.integer = rx.integer.test;
+exports.integer = v => rx.integer.test(v);
 
-exports.number = rx.number.test;
+exports.number = v => rx.number.test(v);
