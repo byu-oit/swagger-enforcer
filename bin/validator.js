@@ -463,7 +463,7 @@ Validator.prototype.type = function(schema, at, value) {
 Validator.prototype.validate = function(schema, at, value) {
 
     // if no schema then we're done validating-
-    if (!schema || (!schema.type && !schema.enum)) return;
+    if (!schema || (!schema.type && !schema.enum)) return this;
 
     // validate serializable and type
     this.serializable(at, value);
