@@ -17,7 +17,7 @@
 'use strict';
 const rx        = require('./rx');
 
-exports.base64 = rx.base64.test;
+exports.byte = rx.byte.test;
 
 exports.binary = rx.binary.test;
 
@@ -25,7 +25,7 @@ exports.boolean = rx.boolean.test;
 
 exports.date = rx.date.test;
 
-exports.dateTime = rx.time.test;
+exports.dateTime = rx.dateTime.test;
 
 exports.integer = rx.integer.test;
 
