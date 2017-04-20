@@ -44,7 +44,7 @@ function Enforcer(options, definitions) {
          * @type {Object}
          */
         definitions: {
-            value: definitions
+            value: definitions || {}
         },
 
         /**
@@ -124,7 +124,7 @@ function arrayProxy(validator, schema, options, initial) {
                 case 'concat': return function(value) {
                     applyMultipleValueInitializations(schema.items, options, arguments);
                     const ar = target.concat.apply(target, arguments);
-                    validator.arrayItems(schema, at, ar, arguments);
+                    validator.arrayItems(schema, '', ar, arguments);
                     validator.arrayLength(schema, '', ar.length);
                     arraySetProxies(validator, schema, options, ar);
                     return arrayProxy(validator, schema, options, ar);
@@ -147,14 +147,14 @@ function arrayProxy(validator, schema, options, initial) {
 
                 case 'filter': return function(callback, thisArg) {
                     const ar = target.filter.apply(target, arguments);
-                    validate(schema, ar);
+                    validator.validate(schema, '', ar);
                     return arrayProxy(validator, schema, options, ar);
                 };
 
                 case 'map': return function(callback, thisArg) {
                     const ar = target.map.apply(target, arguments);
                     applyMultipleValueInitializations(schema.items, options, ar);
-                    validate(schema, ar);
+                    validator.validate(schema, '', ar);
                     return arrayProxy(validator, schema, options, ar);
                 };
 
@@ -179,7 +179,7 @@ function arrayProxy(validator, schema, options, initial) {
                 case 'slice': return function(begin, end) {
                     const ar = target.slice.apply(target, arguments);
                     applyMultipleValueInitializations(schema.items, options, ar);
-                    validate(schema, ar);
+                    validator.validate(schema, '', ar);
                     return arrayProxy(validator, schema, options, ar);
                 };
 
@@ -280,7 +280,7 @@ function arraySetProxies(validator, schema, options, values) {
  */
 function applyMultipleValueInitializations(schema, options, values) {
     if (schema) {
-        const length = args.length;
+        const length = values.length;
         for (let i = 0; i < length; i++) {
             values[i] = autoFormat(schema, options, applyDefaults(schema, options, values[i]));
         }
@@ -345,7 +345,7 @@ function getProxy(validator, schema, options, value) {
 
 function enforceAll(options) {
     if (options.validateAll) {
-        options = Object.assign({}, this.options);
+        options = Object.assign({}, options);
         options.enforce = Object.assign({}, options.enforce);
         Object.keys(options.enforce).forEach(key => options.enforce[key] = true);
     }

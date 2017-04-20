@@ -46,7 +46,7 @@ Validator.prototype.array = function(schema, at, array) {
     this.arrayUniqueItems(schema, at, [], array);
 
     if (schema.items) {
-        for (let i = 0; i < length; i++) this.validate(schema, at + '/' + i, array[i]);
+        for (let i = 0; i < length; i++) this.validate(schema.items, at + '/' + i, array[i]);
     }
 
     return this;
@@ -169,11 +169,7 @@ Validator.prototype.enum = function(schema, at, value) {
  * @returns {Validator}
  */
 Validator.prototype.error = function(at, message, code) {
-    const fullCode = 'ESE' + code;
-    const fullMessage = 'Error ' + fullCode + (at ? ' at ' + at : '') + ': ' + message;
-    const err = Error(fullMessage);
-    err.at = at;
-    err.code = fullCode;
+    const err = buildError(at, message, code);
     if (!this.errors) {
         throw err;
     } else {
@@ -331,7 +327,7 @@ Validator.prototype.objectProperty = function(schema, at, value, property) {
 Validator.prototype.objectPropertyRequired = function(schema, at, property) {
     allOf(this, schema, function (schema) {
         if (schema.properties && schema.properties[property] && schema.properties[property].required) {
-            this.error('Missing required property: ' + property, 'REQ');
+            this.error(at, 'Missing required property: ' + property, 'REQ');
         }
     });
     return this;
@@ -389,7 +385,8 @@ Validator.prototype.string = function(schema, at, string) {
  */
 Validator.prototype.throw = function() {
     if (this.errors.length > 0) {
-        throw Error("Validation failed due to one or more errors:\n\t" + this.errors.join('\n\t'));
+        const code = this.errors.length === 1 ? this.errors[0].code.substr(3) : 'MLTI';
+        throw buildError('', "Validation failed due to one or more errors:\n\t" + this.errors.join('\n\t'), code);
     }
     return this;
 };
@@ -506,14 +503,23 @@ function allOf(context, schema, callback) {
     }
 }
 
+function buildError(at, message, code) {
+    const fullCode = 'ESE' + code;
+    const fullMessage = 'Error ' + fullCode + (at ? ' at ' + at : '') + ': ' + message;
+    const err = Error(fullMessage);
+    err.at = at;
+    err.code = fullCode;
+    return err;
+}
+
 function validateDateTime(context, at, value) {
-    const match = rx.dateTime(value);
+    const match = rx.dateTime.exec(value);
 
     const year = +match[1];
     const month = +match[2] - 1;
     const day = +match[3];
     const date = new Date(year, month, day);
-    if (date.getFullYear() !== year || date.getMonth() !== month || date.getDay() !== day) {
+    if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) {
         context.error(at, 'Date does not exist on the calendar.', 'DATE');
     }
 
