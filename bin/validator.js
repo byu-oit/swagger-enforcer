@@ -384,9 +384,11 @@ Validator.prototype.string = function(schema, at, string) {
  * @returns {Validator}
  */
 Validator.prototype.throw = function() {
-    if (this.errors.length > 0) {
-        const code = this.errors.length === 1 ? this.errors[0].code.substr(3) : 'MLTI';
-        throw buildError('', "Validation failed due to one or more errors:\n\t" + this.errors.join('\n\t'), code);
+    const length = this.errors.length;
+    if (length === 1) {
+        throw this.errors[0];
+    } else if (length > 1) {
+        throw buildError('', "Validation failed due to one or more errors:\n\t" + this.errors.join('\n\t'), 'MLTI');
     }
     return this;
 };
@@ -504,12 +506,16 @@ function allOf(context, schema, callback) {
 }
 
 function buildError(at, message, code) {
-    const fullCode = 'ESE' + code;
-    const fullMessage = 'Error ' + fullCode + (at ? ' at ' + at : '') + ': ' + message;
-    const err = Error(fullMessage);
+    const err = Error(message);
     err.at = at;
-    err.code = fullCode;
+    err.code = 'ESE' + code;
+    err.toString = errorToString;
     return err;
+}
+
+function errorToString() {
+    const at = this.at;
+    return 'Error' + (at ? ' at ' + at : '') + ': ' + this.message;
 }
 
 function validateDateTime(context, at, value) {
