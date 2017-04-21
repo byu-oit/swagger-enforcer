@@ -84,11 +84,10 @@ Validator.prototype.arrayItems = function(schema, at, target, items) {
  * Validate that the array length falls within constraints.
  * @param {Object} schema
  * @param {string} at
- * @param {Array, number} length
+ * @param {number} length
  * @returns {Validator}
  */
 Validator.prototype.arrayLength = function(schema, at, length) {
-    if (typeof length !== 'number') length = length.length;
 
     // validate max items
     if (schema.hasOwnProperty('maxItems') && length > schema.maxItems) {
@@ -428,6 +427,7 @@ Validator.prototype.throw = function() {
  */
 Validator.prototype.type = function(schema, at, value) {
     const valueType = typeof value;
+    let code = 'TYPE';
     let expected = '';
 
     if (schema.type === 'array' && !Array.isArray(value)) {
@@ -451,14 +451,21 @@ Validator.prototype.type = function(schema, at, value) {
         } else {
             switch (schema.format) {
                 case 'binary':
-                    if (!is.binary(value)) expected = 'a binary octet sequence';
+                    if (!is.binary(value)) {
+                        expected = 'a binary octet sequence';
+                        code = 'FRMT';
+                    }
                     break;
                 case 'byte':
-                    if (!is.byte(value)) expected = 'a base64 encoded string';
+                    if (!is.byte(value)) {
+                        expected = 'a base64 encoded string';
+                        code = 'FRMT';
+                    }
                     break;
                 case 'date':
                     if (!is.date(value)) {
                         expected = 'a date formatted as YYYY-MM-DD';
+                        code = 'FRMT';
                     } else {
                         validateDateTime(this, at, value + 'T00:00:00.000Z');
                     }
@@ -466,6 +473,7 @@ Validator.prototype.type = function(schema, at, value) {
                 case 'date-time':
                     if (!is.dateTime(value)) {
                         expected = 'a date-time formatted as YYYY-MM-DDThh:mm:ss.uuuZ';
+                        code = 'FRMT';
                     } else {
                         validateDateTime(this, at, value);
                     }
@@ -474,7 +482,7 @@ Validator.prototype.type = function(schema, at, value) {
         }
     }
 
-    if (expected) this.error(at, 'Invalid type: Expected ' + expected + '. Received: ' + value, 'TYPE');
+    if (expected) this.error(at, 'Invalid type: Expected ' + expected + '. Received: ' + value, code);
 
     return this;
 };
