@@ -310,7 +310,7 @@ Validator.prototype.objectHasRequiredProperties = function(schemas, at, object) 
         if (schema.properties) {
             const missingProperties = Object.keys(schema.properties)
                 .filter(property => valueProperties.indexOf(property) === -1);
-            missingProperties.forEach(property => self.objectPropertyRequired([schema], at + '/' + property, property));
+            missingProperties.forEach(property => objectPropertyRequired(self, schema, at + '/' + property, property));
         }
     });
     return this;
@@ -350,11 +350,7 @@ Validator.prototype.objectProperty = function(schemas, at, value, property) {
  * @returns {Validator}
  */
 Validator.prototype.objectPropertyRequired = function(schemas, at, property) {
-    allOf(this, schemas, function (schema) {
-        if (schema.properties && schema.properties[property] && schema.properties[property].required) {
-            this.error(at, 'Missing required property: ' + property, 'REQ');
-        }
-    });
+    allOf(this, schemas, schema => objectPropertyRequired(this, schema, at, property));
     return this;
 };
 
@@ -577,6 +573,12 @@ function buildObjectInheritances(store, schema, at) {
 function errorToString() {
     const at = this.at;
     return 'Error' + (at ? ' at ' + at : '') + ': ' + this.message;
+}
+
+function objectPropertyRequired(context, schema, at, property) {
+    if (schema.properties && schema.properties[property] && schema.properties[property].required) {
+        context.error(at, 'Missing required property: ' + property, 'REQ');
+    }
 }
 
 function validateDateTime(context, at, value) {
