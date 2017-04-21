@@ -17,7 +17,7 @@
 'use strict';
 const rx        = require('./rx');
 
-exports.byte = v => rx.byte.test(v);
+exports.byte = v => rx.byte.test(v) && v.length % 4 === 0;
 
 exports.binary = v => rx.binary.test(v);
 
