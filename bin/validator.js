@@ -226,28 +226,54 @@ Validator.prototype.object = function(schema, at, object) {
     const valueProperties = Object.keys(object);
     const valuePropertiesLength = valueProperties.length;
 
-    this.objectHasRequiredProperties(schema, at, object);
-    this.objectPropertyLength(schema, at, valuePropertiesLength);
+    const schemas = this.objectSchemas(schema, at, object);
+
+    this.objectHasRequiredProperties(schemas, at, object);
+    this.objectPropertyLength(schemas, at, valuePropertiesLength);
 
     // validate all value properties
     for (let i = 0; i < valuePropertiesLength; i++) {
         const property = valueProperties[i];
-        this.objectProperty(schema, at + '/' + property, object[property], property);
+        this.objectProperty(schemas, at + '/' + property, object[property], property);
     }
 
     return this;
 };
 
 /**
- * Validate a the number of properties
+ * Get all schema variations possible, including allOf and discriminators.
  * @param {Object} schema
+ * @param {string} at
+ * @param {Object} object
+ * @returns {Array}
+ */
+Validator.prototype.objectSchemas = function(schema, at, object) {
+    const context = this;
+    const store = {
+        definitions: context.definitions,
+        error: function(message) {
+            context.error(at, message, 'HRTN');
+        },
+        map: new Map(),
+        schemas: [],
+        value: object
+    };
+
+    buildObjectInheritances(store, schema, at);
+
+    return store.schemas;
+};
+
+/**
+ * Validate a the number of properties
+ * @param {Object[]} schemas
  * @param {string} at
  * @param {Object, number} object
  * @param {string} [property]
  * @param {boolean} [setting]
  * @returns {Validator}
  */
-Validator.prototype.objectPropertyLength = function(schema, at, object, property, setting) {
+Validator.prototype.objectPropertyLength = function(schemas, at, object, property, setting) {
     const objectProvided = typeof object === 'object';
     let length = objectProvided ? Object.keys(object).length : object;
     if (objectProvided && arguments.length > 3) {
@@ -258,7 +284,7 @@ Validator.prototype.objectPropertyLength = function(schema, at, object, property
             length--;
         }
     }
-    allOf(this, schema, function(schema) {
+    allOf(this, schemas, function(schema) {
 
         if (schema.hasOwnProperty('maxProperties') && length > schema.maxProperties) {
             this.error(at, 'The object has more properties than the allowed maximum: ' + schema.maxProperties, 'LEN');
@@ -273,19 +299,19 @@ Validator.prototype.objectPropertyLength = function(schema, at, object, property
 
 /**
  * Validate that an object has all required properties.
- * @param {Object} schema
+ * @param {Object[]} schemas
  * @param {string} at
  * @param {Object} object
  * @returns {Validator}
  */
-Validator.prototype.objectHasRequiredProperties = function(schema, at, object) {
+Validator.prototype.objectHasRequiredProperties = function(schemas, at, object) {
     const valueProperties = Object.keys(object);
     const self = this;
-    allOf(this, schema, function (schema) {
+    allOf(this, schemas, function (schema) {
         if (schema.properties) {
             const missingProperties = Object.keys(schema.properties)
                 .filter(property => valueProperties.indexOf(property) === -1);
-            missingProperties.forEach(property => self.objectPropertyRequired(schema, at + '/' + property, property));
+            missingProperties.forEach(property => self.objectPropertyRequired([schema], at + '/' + property, property));
         }
     });
     return this;
@@ -293,14 +319,14 @@ Validator.prototype.objectHasRequiredProperties = function(schema, at, object) {
 
 /**
  * Validate an object property's value against its schema.
- * @param {Object} schema
+ * @param {Object[]} schemas
  * @param {string} at
  * @param {*} value
  * @param {string} property
  * @returns {Validator}
  */
-Validator.prototype.objectProperty = function(schema, at, value, property) {
-    allOf(this, schema, function (schema) {
+Validator.prototype.objectProperty = function(schemas, at, value, property) {
+    allOf(this, schemas, function (schema) {
         if (schema.properties && schema.properties[property]) {
             this.validate(schema.properties[property], at, value);
 
@@ -319,13 +345,13 @@ Validator.prototype.objectProperty = function(schema, at, value, property) {
 
 /**
  * Produce an error if the property is required.
- * @param {Object} schema
+ * @param {Object[]} schemas
  * @param {string} at
  * @param {string} property
  * @returns {Validator}
  */
-Validator.prototype.objectPropertyRequired = function(schema, at, property) {
-    allOf(this, schema, function (schema) {
+Validator.prototype.objectPropertyRequired = function(schemas, at, property) {
+    allOf(this, schemas, function (schema) {
         if (schema.properties && schema.properties[property] && schema.properties[property].required) {
             this.error(at, 'Missing required property: ' + property, 'REQ');
         }
@@ -496,13 +522,9 @@ Validator.prototype.validate = function(schema, at, value) {
 };
 
 
-function allOf(context, schema, callback) {
-    if (schema.allOf) {
-        const allOfLength = schema.allOf.length;
-        for (let i = 0; i < allOfLength; i++) callback.call(context, schema.allOf[i]);
-    } else {
-        callback.call(context, schema);
-    }
+function allOf(context, schemas, callback) {
+    const length = schemas.length;
+    for (let i = 0; i < length; i++) callback.call(context, schemas[i]);
 }
 
 function buildError(at, message, code) {
@@ -511,6 +533,37 @@ function buildError(at, message, code) {
     err.code = 'ESE' + code;
     err.toString = errorToString;
     return err;
+}
+
+function buildObjectInheritances(store, schema, at) {
+    const definitions = store.definitions;
+
+    if (schema && !store.map.has(schema)) {
+
+        const hasAllOf = Array.isArray(schema.allOf);
+        const notAllOf = !hasAllOf;
+        store.map.set(schema, notAllOf);
+        if (notAllOf) store.schemas.push(schema);
+
+        if (hasAllOf) {
+            schema.allOf.forEach(schema => buildObjectInheritances(store, schema, at));
+
+        } else if (schema.hasOwnProperty('discriminator')) {
+            const value = store.value;
+            const discriminator = schema.discriminator;
+            const name = value[discriminator];
+
+            if (!value.hasOwnProperty(discriminator)) {
+                store.error('Missing required discriminator property: ' + discriminator);
+
+            } else if (!definitions.hasOwnProperty(name)) {
+                store.error('Could not find definition "' + name + '" for discriminator: ' + discriminator);
+
+            } else {
+                buildObjectInheritances(store, definitions[name], at);
+            }
+        }
+    }
 }
 
 function errorToString() {

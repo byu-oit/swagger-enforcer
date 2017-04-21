@@ -232,8 +232,9 @@ function arrayProxy(validator, schema, options, initial) {
 function objectProxy(validator, schema, options, initial) {
     return new Proxy(initial, {
         deleteProperty: function(target, property) {
-            validator.objectPropertyLength(schema, '', target, property, false);
-            validator.objectPropertyRequired(schema, '', property);
+            const schemas = validator.objectSchemas(schema, '', target);
+            validator.objectPropertyLength(schemas, '', target, property, false);
+            validator.objectPropertyRequired(schemas, '', property);
             delete target[property];
             return true;
         },
@@ -248,13 +249,17 @@ function objectProxy(validator, schema, options, initial) {
             value = applyDefaults(schema, options, value);
             value = autoFormat(schema, options, value);
             validator.serializable('', value);
-            validator.objectPropertyLength(schema, '', target, property, true);
-            validator.objectProperty(schema, '', value, property);
+
+            const schemas = validator.objectSchemas(schema, '', target);
+            validator.objectPropertyLength(schemas, '', target, property, true);
+            validator.objectProperty(schemas, '', value, property);
+
             const subSchema = schema.properties && schema.properties[property]
                 ? schema.properties[property]
                 : schema.additionalProperties;
             target[property] = subSchema ? getProxy(validator, subSchema, options, value) : value;
-            validator.objectHasRequiredProperties(schema, '', target);
+
+            validator.objectHasRequiredProperties(schemas, '', target);
             return true;
         }
     });
