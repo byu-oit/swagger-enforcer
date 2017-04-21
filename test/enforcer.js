@@ -770,6 +770,95 @@ describe('enforcer', () => {
 
             });
 
+            describe('binary', () => {
+                const schema = { type: 'string', format: 'binary' };
+
+                it('is binary', () => {
+                    expect(() => enforcer(options).enforce(schema, '00001111')).not.to.throw(Error);
+                });
+
+                it('not 8-bits', () => {
+                    expect(code(() => enforcer(options).enforce(schema, '01'))).to.equal('ESEFRMT');
+                });
+
+                it('not 0 or 1', () => {
+                    expect(code(() => enforcer(options).enforce(schema, 'abc'))).to.equal('ESEFRMT');
+                });
+
+            });
+
+            describe('boolean', () => {
+                const schema = { type: 'boolean' };
+
+                it('is boolean', () => {
+                    expect(() => enforcer(options).enforce(schema, true)).not.to.throw(Error);
+                });
+
+                it('not boolean', () => {
+                    expect(code(() => enforcer(options).enforce(schema, 'true'))).to.equal('ESETYPE');
+                });
+
+            });
+
+            describe('byte', () => {
+                const schema = { type: 'string', format: 'byte' };
+
+                it('is byte', () => {
+                    expect(() => enforcer(options).enforce(schema, 'ab==')).not.to.throw(Error);
+                });
+
+                it('not length of 4', () => {
+                    expect(code(() => enforcer(options).enforce(schema, 'ab'))).to.equal('ESEFRMT');
+                });
+
+                it('invalid characters', () => {
+                    expect(code(() => enforcer(options).enforce(schema, '~'))).to.equal('ESEFRMT');
+                });
+
+            });
+
+            describe('date', () => {
+                const schema = { type: 'string', format: 'date' };
+
+                it('is valid date', () => {
+                    expect(() => enforcer(options).enforce(schema, '2000-01-01')).not.to.throw(Error);
+                });
+
+                it('invalid date', () => {
+                    expect(code(() => enforcer(options).enforce(schema, '2000-01-40'))).to.equal('ESEDATE');
+                });
+
+                it('invalid characters', () => {
+                    expect(code(() => enforcer(options).enforce(schema, 'abc'))).to.equal('ESEFRMT');
+                });
+
+            });
+
+            describe('date-time', () => {
+                const schema = { type: 'string', format: 'date-time' };
+
+                it('is valid date-time', () => {
+                    expect(() => enforcer(options).enforce(schema, '2000-01-01T00:00:00.000Z')).not.to.throw(Error);
+                });
+
+                it('invalid date-time hour', () => {
+                    expect(code(() => enforcer(options).enforce(schema, '2000-01-01T30:00:00.000Z'))).to.equal('ESEDATE');
+                });
+
+                it('invalid date-time minute', () => {
+                    expect(code(() => enforcer(options).enforce(schema, '2000-01-01T00:90:00.000Z'))).to.equal('ESEDATE');
+                });
+
+                it('invalid date-time second', () => {
+                    expect(code(() => enforcer(options).enforce(schema, '2000-01-01T00:00:90.000Z'))).to.equal('ESEDATE');
+                });
+
+                it('invalid characters', () => {
+                    expect(code(() => enforcer(options).enforce(schema, 'abc'))).to.equal('ESEFRMT');
+                });
+
+            });
+
             describe('string', () => {
 
                 it('valid max length', () => {
@@ -892,6 +981,32 @@ describe('enforcer', () => {
             const options = schemas.enforcer.normalize({ enforce: { maximum: false }, validateAll: false });
             const schema = { type: 'number', maximum: 10 };
             expect(() => enforcer(options).validate(schema, 15)).not.to.throw(Error);
+        });
+
+    });
+
+    describe('errors', () => {
+
+        it('validate all', () => {
+            const options = schemas.enforcer.normalize({ enforce: { maximum: false } });
+            const schema = { type: 'number', maximum: 10 };
+            const errors = enforcer(options).errors(schema, 15);
+            expect(errors.length).to.equal(1);
+            expect(errors[0].code).to.equal('ESENMAX');
+        });
+
+        it('validate all multiple errors', () => {
+            const options = schemas.enforcer.normalize({ enforce: { maximum: false } });
+            const schema = { type: 'number', maximum: 10, multipleOf: 2 };
+            const errors = enforcer(options).errors(schema, 15);
+            expect(errors.length).to.equal(2);
+        });
+
+        it('don\'t validate all', () => {
+            const options = schemas.enforcer.normalize({ enforce: { maximum: false }, validateAll: false });
+            const schema = { type: 'number', maximum: 10 };
+            const errors = enforcer(options).errors(schema, 15);
+            expect(errors.length).to.equal(0);
         });
 
     });
