@@ -957,12 +957,32 @@ describe('enforcer', () => {
 
         });
 
-        it('definitions not provided does not throw error', () => {
-            expect(() => enforcer({})).not.to.throw(Error);
-        });
+        describe('construct', () => {
 
-        it('options not provided does not throw error', () => {
-            expect(() => enforcer({}, {})).not.to.throw(Error);
+            it('schema must be an object', () => {
+                expect(() => enforcer('hello')).to.throw(Error);
+            });
+
+            it('definition must be an object', () => {
+                expect(() => enforcer({}, 'hello')).to.throw(Error);
+            });
+
+            it('options must be an object', () => {
+                expect(() => enforcer({}, {}, 'hello')).to.throw(Error);
+            });
+
+            it('schema missing throws an error', () => {
+                expect(() => enforcer()).to.throw(Error);
+            });
+
+            it('definitions not provided does not throw error', () => {
+                expect(() => enforcer({})).not.to.throw(Error);
+            });
+
+            it('options not provided does not throw error', () => {
+                expect(() => enforcer({}, {})).not.to.throw(Error);
+            });
+
         });
 
     });
