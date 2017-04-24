@@ -364,17 +364,6 @@ function getProxy(validator, schema, options, value) {
     return value;
 }
 
-function enforceAll(options) {
-    const singleEnforcement = options.enforce;
-
-    if (options.validateAll) {
-        options = Object.assign({}, options);
-        options.enforce = Object.assign({}, options.enforce);
-        Object.keys(options.enforce).forEach(key => options.enforce[key] = true);
-    }
-    return options;
-}
-
 /**
  * Convert a full array-like object into a subset array-like object.
  * @param {Object} args The full array-like object.
