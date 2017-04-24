@@ -30,7 +30,7 @@ describe('release', () => {
             items: { type: 'number' }
         };
 
-        beforeEach(() => obj = enforcer(options).enforce(schema));
+        beforeEach(() => obj = enforcer(schema, {}, options).enforce());
 
         it('enforced', () => {
             expect(() => obj.push('a')).to.throw(Error);
@@ -54,7 +54,7 @@ describe('release', () => {
             }
         };
 
-        beforeEach(() => obj = enforcer(options).enforce(schema));
+        beforeEach(() => obj = enforcer(schema, {}, options).enforce());
 
         it('enforced', () => {
             expect(() => obj.num = 'a').to.throw(Error);
@@ -85,7 +85,7 @@ describe('release', () => {
             }
         };
 
-        beforeEach(() => obj = enforcer(options).enforce(schema, { ar: [], obj: {} }));
+        beforeEach(() => obj = enforcer(schema, {}, options).enforce({ ar: [], obj: {} }));
 
         it('enforced', () => {
             expect(() => obj.ar.push('a')).to.throw(Error);
