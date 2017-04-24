@@ -251,7 +251,7 @@ Validator.prototype.objectSchemas = function(schema, at, object) {
     const store = {
         definitions: context.definitions,
         error: function(message) {
-            context.error(at, message, 'HRTN');
+            context.error(at, message, 'HTNC');
         },
         map: new Map(),
         schemas: [],
