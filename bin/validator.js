@@ -258,7 +258,7 @@ Validator.prototype.objectSchemas = function(schema, at, object) {
         value: object
     };
 
-    buildObjectInheritances(store, schema, at);
+    buildObjectInheritances(store, schema, at, true);
 
     return store.schemas;
 };
@@ -325,20 +325,26 @@ Validator.prototype.objectHasRequiredProperties = function(schemas, at, object) 
  * @returns {Validator}
  */
 Validator.prototype.objectProperty = function(schemas, at, value, property) {
+    let propertyAllowed = false;
+
     allOf(this, schemas, function (schema) {
         if (schema.properties && schema.properties[property]) {
+            propertyAllowed = true;
             this.validate(schema.properties[property], at, value);
 
         } else if (schema.additionalProperties) {
+            propertyAllowed = true;
             this.validate(schema.additionalProperties, at, value);
-
-        } else if (schema.properties) {
-            this.error(at, 'Property not allowed: ' + property, 'NPER');
 
         } else {
             this.serializable(at, value);
         }
     });
+
+    if (!propertyAllowed) {
+        this.error(at, 'Property not allowed: ' + property, 'NPER');
+    }
+
     return this;
 };
 
@@ -539,18 +545,25 @@ function buildError(at, message, code) {
     return err;
 }
 
-function buildObjectInheritances(store, schema, at) {
+function buildObjectInheritances(store, schema, at, first) {
     const definitions = store.definitions;
 
+    // only process schemas that haven't been processed yet
     if (schema && !store.map.has(schema)) {
 
+        // store schema as processed
+        store.map.set(schema, true);
+
+        // determine if it has an allOf property
         const hasAllOf = Array.isArray(schema.allOf);
-        const notAllOf = !hasAllOf;
-        store.map.set(schema, notAllOf);
-        if (notAllOf) store.schemas.push(schema);
+
+        // store each schema
+        if (!hasAllOf) store.schemas.push(schema);
 
         if (hasAllOf) {
-            schema.allOf.forEach(schema => buildObjectInheritances(store, schema, at));
+            schema.allOf.forEach(schema => {
+                buildObjectInheritances(store, schema, at, false)
+            });
 
         } else if (schema.hasOwnProperty('discriminator')) {
             const value = store.value;
@@ -564,7 +577,7 @@ function buildObjectInheritances(store, schema, at) {
                 store.error('Could not find definition "' + name + '" for discriminator: ' + discriminator);
 
             } else {
-                buildObjectInheritances(store, definitions[name], at);
+                buildObjectInheritances(store, definitions[name], at, false);
             }
         }
     }
