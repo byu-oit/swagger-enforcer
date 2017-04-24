@@ -1128,6 +1128,18 @@ describe('enforcer', () => {
                 expect(errors[0].code).to.equal('ESEHTNC');
             });
 
+            it('valid two layer discriminator', () => {
+                const value = {
+                    classification: 'Pet',
+                    petType: 'Cat',
+                    warmBlooded: true,
+                    name: 'Mittens',
+                    huntingSkill: 'mean'
+                };
+                const errors = enforcer(definitions.Animal, definitions, options).errors(value);
+                expect(errors.length).to.equal(0);
+            });
+
         });
 
     });
