@@ -29,7 +29,7 @@ module.exports = Enforcer;
 
 /**
  * Create an enforcer instance.
- * @param {object} {schema}
+ * @param {object} schema
  * @param {object} [definitions={}] Only required if discriminators are used
  * @param {object} [options={}]
  * @returns {Enforcer}
@@ -38,13 +38,17 @@ module.exports = Enforcer;
 function Enforcer(schema, definitions, options) {
     const factory = Object.create(Enforcer.prototype);
 
-    // normalize definitions
+    // validate schema
+    if (!schema || typeof schema !== 'object') throw Error('Enforcer schema must be a non-null object.');
+
+    // normalize and validate definitions
     if (arguments.length < 2) definitions = {};
     if (!definitions || typeof definitions !== 'object') throw Error('Enforcer definitions must be a non-null object.');
 
-    // normalize options
+    // normalize and validate options
     let straightEnforcementValue;
     if (arguments.length < 3) options = {};
+    if (!options || typeof options !== 'object') throw Error('Enforcer options must be a non-null object.');
     const straightEnforcement = typeof options.enforce === 'boolean';
     if (straightEnforcement) straightEnforcementValue = options.enforce;
     if (straightEnforcement || !options.hasOwnProperty('enforce')) options.enforce = {};
