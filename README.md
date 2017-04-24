@@ -19,9 +19,6 @@ To validate while building ([enforce](#enforcerprototypeenforce)), this package 
 ```js
 const Enforcer = require('swagger-enforcer');
 
-// create enforcer instance that defines which rules to enforce
-const enforcer = Enforcer({ useDefaults: true });
-
 // a schema to enforce
 const schema = {
     type: 'object',
@@ -38,10 +35,19 @@ const schema = {
     }
 };
 
-// build an object that enforces the schema
-const obj = enforcer.enforce(schema);
+// define swagger schema definitions
+const definitions = {};
 
-console.log(obj);       // because 'str' had a default value: { str: 'foo' }
+// define enforcer options
+const options = { useDefaults: true };
+
+// create enforcer instance that defines which rules to enforce
+const enforcer = Enforcer(schema, definitions, options);
+
+// build an object that enforces the schema
+const obj = enforcer.enforce();
+
+console.log(obj);       // { str: 'foo' } - this is because 'str' had a default value: 
 obj.num = 5;            // validates successfully and value is set
 obj.str = 'abc';        // throws an error because 'abc' is not in enum
 ```
@@ -53,9 +59,6 @@ obj.str = 'abc';        // throws an error because 'abc' is not in enum
 ```js
 const Enforcer = require('swagger-enforcer');
 
-// create enforcer instance that defines which rules to enforce
-const enforcer = Enforcer({ useDefaults: true });
-
 // a schema to enforce
 const schema = {
     type: 'object',
@@ -71,6 +74,9 @@ const schema = {
         }
     }
 };
+
+// create enforcer instance that defines which rules to enforce
+const enforcer = Enforcer(schema, {}, { useDefaults: true });
 
 // build the object
 const obj = {
@@ -113,39 +119,14 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
 
 Produce an enforcer instance that can enforce a swagger schema while you build the object and/or that validates the object after it is built.
 
-**Signature:** `Enforcer ([ options [, definitions ] ]) : Enforcer`
+**Signature:** `Enforcer (schema [, definitions [, options ] ]) : Enforcer`
 
 **Parameters:**
 
-* *options* - [Enforcement options](#enforcement-options). Defaults to:
+* *definitions* - An object containing definitions by name. Definitions are only necessary if using discriminators.
 
     ```
     {
-        autoFormat: false,
-        enforce: {
-            enum: true,
-            maxItems: true,
-            minItems: false,
-            uniqueItems: true,
-            multipleOf: true,
-            maximum: true,
-            minimum: true,
-            maxLength: true,
-            minLength: true,
-            pattern: true,
-            additionalProperties: true,
-            maxProperties: true,
-            minProperties: false,
-            required: false
-        },
-        useDefaults: false,
-        validateAll: true
-    }
-    ```
-* *definitions* - An object containing definitions by name. This is only necessary if using discriminators.
-
-    ```js
-    const definitions = {
         Pet: {
             type: 'object',
             discriminator: 'petType',
@@ -176,6 +157,32 @@ Produce an enforcer instance that can enforce a swagger schema while you build t
     }
     ```
 
+* *options* - [Enforcement options](#enforcement-options). Defaults to:
+
+    ```
+    {
+        autoFormat: false,
+        enforce: {
+            enum: true,
+            maxItems: true,
+            minItems: false,
+            uniqueItems: true,
+            multipleOf: true,
+            maximum: true,
+            minimum: true,
+            maxLength: true,
+            minLength: true,
+            pattern: true,
+            additionalProperties: true,
+            maxProperties: true,
+            minProperties: false,
+            required: false
+        },
+        useDefaults: false,
+        validateAll: true
+    }
+    ```
+
 **Returns** - An enforcer instance with the following prototype methods: [Enforcer.prototype.enforce](#enforcerprototypeenforce) and [Enforcer.prototype.validate](#enforcerprototypevalidate).
 
 [Back to API Table of Contents](#api)
@@ -184,11 +191,9 @@ Produce an enforcer instance that can enforce a swagger schema while you build t
 
 Validate an object while you build it.
 
-**Signature:** `.enforce ( schema [, initial ]) : *`
+**Signature:** `.enforce ( [ initial ]) : *`
 
 **Parameters:**
-
-* *schema* - The swagger schema to enforce.
 
 * *initial* - An optional value to initialize the enforcement with.
  
@@ -202,13 +207,11 @@ Validate an object while you build it.
 
 Validate an object as if it were fully built. An array is returned with any errors that were encountered.
 
-**Signature:** `.errors ( schema, value ) : Error[]`
+**Signature:** `.errors ( value ) : Error[]`
 
 **Parameters:**
 
-* *schema* - The swagger schema to enforce.
-
-* *initial* - An value to validate.
+* *value* - An value to validate.
  
 **Returns** - An array of Error objects.
 
@@ -218,13 +221,11 @@ Validate an object as if it were fully built. An array is returned with any erro
 
 Validate an object as if it were fully built. If validation fails then an error will be thrown.
 
-**Signature:** `.validate ( schema, value ) : undefined`
+**Signature:** `.validate ( value ) : undefined`
 
 **Parameters:**
 
-* *schema* - The swagger schema to enforce.
-
-* *initial* - An value to validate.
+* *value* - An value to validate.
  
 **Returns** - Undefined. If validation fails then an error will be thrown.
 
