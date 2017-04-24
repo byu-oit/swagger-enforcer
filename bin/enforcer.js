@@ -29,13 +29,27 @@ module.exports = Enforcer;
 
 /**
  * Create an enforcer instance.
- * @param {object} [options={}]
+ * @param {object} {schema}
  * @param {object} [definitions={}] Only required if discriminators are used
+ * @param {object} [options={}]
  * @returns {Enforcer}
  * @constructor
  */
-function Enforcer(options, definitions) {
+function Enforcer(schema, definitions, options) {
     const factory = Object.create(Enforcer.prototype);
+
+    // normalize definitions
+    if (arguments.length < 2) definitions = {};
+    if (!definitions || typeof definitions !== 'object') throw Error('Enforcer definitions must be a non-null object.');
+
+    // normalize options
+    let straightEnforcementValue;
+    if (arguments.length < 3) options = {};
+    const straightEnforcement = typeof options.enforce === 'boolean';
+    if (straightEnforcement) straightEnforcementValue = options.enforce;
+    if (straightEnforcement || !options.hasOwnProperty('enforce')) options.enforce = {};
+    options = schemas.enforcer.normalize(options);
+    if (straightEnforcement) Object.keys(options.enforce).forEach(key => options.enforce[key] = straightEnforcementValue);
 
     Object.defineProperties(factory, {
 
@@ -44,7 +58,7 @@ function Enforcer(options, definitions) {
          * @type {Object}
          */
         definitions: {
-            value: definitions || {}
+            value: definitions
         },
 
         /**
@@ -52,27 +66,27 @@ function Enforcer(options, definitions) {
          * @type {Object}
          */
         options: {
-            get: function() {
-                return options;
-            },
-            set: function(value) {
-                options = schemas.enforcer.normalize(value);
-            }
+            value: options
+        },
+
+        /**
+         * @name Enforcer#schema
+         * @type {Object}
+         */
+        schema: {
+            value: new PreppedSchema(schema, options)
         }
     });
-
-    factory.options = options || {};
 
     return factory;
 }
 
-Enforcer.prototype.enforce = function (schema, initial) {
+Enforcer.prototype.enforce = function (initial) {
+    const options = this.options;
+    const schema = this.schema;
     const validator = new Validator(this.definitions, true);
     if (!canProxy.proxiable) validator.error('', 'Your version of JavaScript does not support proxying.', 'PROX');
 
-    // get prepped schma
-    const options = this.options;
-    schema = new PreppedSchema(schema, options);
 
     // determine initial value if not provided
     if (arguments.length < 2) {
@@ -93,16 +107,16 @@ Enforcer.prototype.enforce = function (schema, initial) {
     return getProxy(validator, schema, options, initial);
 };
 
-Enforcer.prototype.errors = function (schema, value) {
-    const options = enforceAll(this.options);
-    const prepped = new PreppedSchema(schema, options);
-    return new Validator(this.definitions, false).validate(prepped, '/', value).errors;
+Enforcer.prototype.errors = function (value) {
+    const options = this.options;
+    const schema = this.schema;
+    return new Validator(this.definitions, false).validate(schema, '/', value).errors;
 };
 
-Enforcer.prototype.validate = function (schema, value) {
-    const options = enforceAll(this.options);
-    const prepped = new PreppedSchema(schema, options);
-    new Validator(this.definitions, false).validate(prepped, '/', value).throw();
+Enforcer.prototype.validate = function (value) {
+    const options = this.options;
+    const schema = this.schema;
+    new Validator(this.definitions, false).validate(schema, '/', value).throw();
 };
 
 /**
@@ -349,6 +363,8 @@ function getProxy(validator, schema, options, value) {
 }
 
 function enforceAll(options) {
+    const singleEnforcement = options.enforce;
+
     if (options.validateAll) {
         options = Object.assign({}, options);
         options.enforce = Object.assign({}, options.enforce);

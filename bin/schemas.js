@@ -116,10 +116,6 @@ exports.enforcer = Typed({
         useDefaults: {
             type: Boolean,
             default: false
-        },
-        validateAll: {
-            type: Boolean,
-            default: true
         }
     }
 });
