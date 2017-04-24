@@ -325,9 +325,11 @@ Validator.prototype.objectHasRequiredProperties = function(schemas, at, object) 
  * @returns {Validator}
  */
 Validator.prototype.objectProperty = function(schemas, at, value, property) {
+    let hasPropertyEnforcement = false;
     let propertyAllowed = false;
 
     allOf(this, schemas, function (schema) {
+        if (schema.properties) hasPropertyEnforcement = true;
         if (schema.properties && schema.properties[property]) {
             propertyAllowed = true;
             this.validate(schema.properties[property], at, value);
@@ -341,7 +343,7 @@ Validator.prototype.objectProperty = function(schemas, at, value, property) {
         }
     });
 
-    if (!propertyAllowed) {
+    if (hasPropertyEnforcement && !propertyAllowed) {
         this.error(at, 'Property not allowed: ' + property, 'NPER');
     }
 
@@ -545,7 +547,7 @@ function buildError(at, message, code) {
     return err;
 }
 
-function buildObjectInheritances(store, schema, at, first) {
+function buildObjectInheritances(store, schema, at) {
     const definitions = store.definitions;
 
     // only process schemas that haven't been processed yet
@@ -562,7 +564,7 @@ function buildObjectInheritances(store, schema, at, first) {
 
         if (hasAllOf) {
             schema.allOf.forEach(schema => {
-                buildObjectInheritances(store, schema, at, false)
+                buildObjectInheritances(store, schema, at)
             });
 
         } else if (schema.hasOwnProperty('discriminator')) {
@@ -577,7 +579,7 @@ function buildObjectInheritances(store, schema, at, first) {
                 store.error('Could not find definition "' + name + '" for discriminator: ' + discriminator);
 
             } else {
-                buildObjectInheritances(store, definitions[name], at, false);
+                buildObjectInheritances(store, definitions[name], at);
             }
         }
     }
