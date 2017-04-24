@@ -15,89 +15,94 @@
  *    limitations under the License.
  **/
 'use strict';
+const canProxy          = require('../bin/can-proxy');
 const expect            = require('chai').expect;
 const enforcer          = require('../bin/enforcer');
 const release           = require('../bin/release');
 const schemas           = require('../bin/schemas');
 
-describe('release', () => {
-    const options = schemas.enforcer.normalize({});
+if (canProxy.proxiable) {
 
-    describe('array', () => {
-        let obj;
-        const schema = {
-            type: 'array',
-            items: { type: 'number' }
-        };
+    describe('release', () => {
+        const options = schemas.enforcer.normalize({});
 
-        beforeEach(() => obj = enforcer(schema, {}, options).enforce());
+        describe('array', () => {
+            let obj;
+            const schema = {
+                type: 'array',
+                items: {type: 'number'}
+            };
 
-        it('enforced', () => {
-            expect(() => obj.push('a')).to.throw(Error);
+            beforeEach(() => obj = enforcer(schema, {}, options).enforce());
+
+            it('enforced', () => {
+                expect(() => obj.push('a')).to.throw(Error);
+            });
+
+            it('released', () => {
+                obj.push(1);
+                obj.push(2);
+                const r = release(obj);
+                expect(() => r.push('a')).not.to.throw(Error);
+            });
+
         });
 
-        it('released', () => {
-            obj.push(1);
-            obj.push(2);
-            const r = release(obj);
-            expect(() => r.push('a')).not.to.throw(Error);
+        describe('object', () => {
+            let obj;
+            const schema = {
+                type: 'object',
+                properties: {
+                    num: {type: 'number'}
+                }
+            };
+
+            beforeEach(() => obj = enforcer(schema, {}, options).enforce());
+
+            it('enforced', () => {
+                expect(() => obj.num = 'a').to.throw(Error);
+            });
+
+            it('released', () => {
+                const r = release(obj);
+                expect(() => r.num = 'a').not.to.throw(Error);
+            });
+
         });
 
-    });
-
-    describe('object', () => {
-        let obj;
-        const schema = {
-            type: 'object',
-            properties: {
-                num: { type: 'number' }
-            }
-        };
-
-        beforeEach(() => obj = enforcer(schema, {}, options).enforce());
-
-        it('enforced', () => {
-            expect(() => obj.num = 'a').to.throw(Error);
-        });
-
-        it('released', () => {
-            const r = release(obj);
-            expect(() => r.num = 'a').not.to.throw(Error);
-        });
-
-    });
-
-    describe('nested object', () => {
-        let obj;
-        const schema = {
-            type: 'object',
-            properties: {
-                ar: {
-                    type: 'array',
-                    items: { type: 'number' }
-                },
-                obj: {
-                    type: 'object',
-                    properties: {
-                        num: { type: 'number' }
+        describe('nested object', () => {
+            let obj;
+            const schema = {
+                type: 'object',
+                properties: {
+                    ar: {
+                        type: 'array',
+                        items: {type: 'number'}
+                    },
+                    obj: {
+                        type: 'object',
+                        properties: {
+                            num: {type: 'number'}
+                        }
                     }
                 }
-            }
-        };
+            };
 
-        beforeEach(() => obj = enforcer(schema, {}, options).enforce({ ar: [], obj: {} }));
+            beforeEach(() => obj = enforcer(schema, {}, options).enforce({ar: [], obj: {}}));
 
-        it('enforced', () => {
-            expect(() => obj.ar.push('a')).to.throw(Error);
-            expect(() => obj.obj.num = 'a').to.throw(Error);
-        });
+            it('enforced', () => {
+                expect(() => obj.ar.push('a')).to.throw(Error);
+                expect(() => obj.obj.num = 'a').to.throw(Error);
+            });
 
-        it('released', () => {
-            const r = release(obj);
-            expect(() => r.ar.push('a')).not.to.throw(Error);
-            expect(() => r.obj.num = 'a').not.to.throw(Error);
+            it('released', () => {
+                const r = release(obj);
+                expect(() => r.ar.push('a')).not.to.throw(Error);
+                expect(() => r.obj.num = 'a').not.to.throw(Error);
+            });
+
         });
 
     });
 
-});
+}

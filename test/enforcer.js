@@ -908,54 +908,58 @@ describe('enforcer', () => {
 
         }
 
-        describe('auto format', () => {
-            const options = schemas.enforcer.normalize({ autoFormat: true });
+        if (canProxy.proxiable) {
 
-            it('object', () => {
-                const v = enforcer({ type: 'object' }, {}, options).enforce({});
-                expect(v).to.deep.equal({});
+            describe('auto format', () => {
+                const options = schemas.enforcer.normalize({autoFormat: true});
+
+                it('object', () => {
+                    const v = enforcer({type: 'object'}, {}, options).enforce({});
+                    expect(v).to.deep.equal({});
+                });
+
+                it('boolean', () => {
+                    const v = enforcer({type: 'boolean'}, {}, options).enforce('');
+                    expect(v).to.equal(false);
+                });
+
+                it('integer', () => {
+                    const v = enforcer({type: 'integer'}, {}, options).enforce('1.2');
+                    expect(v).to.equal(1);
+                });
+
+                it('number', () => {
+                    const v = enforcer({type: 'number'}, {}, options).enforce('1.2');
+                    expect(v).to.equal(1.2);
+                });
+
+                it('binary', () => {
+                    const v = enforcer({type: 'string', format: 'binary'}, {}, options).enforce(1);
+                    expect(v).to.equal('00000001');
+                });
+
+                it('byte', () => {
+                    const v = enforcer({type: 'string', format: 'byte'}, {}, options).enforce(true);
+                    expect(v).to.equal('AQ==');
+                });
+
+                it('date', () => {
+                    const str = '2000-01-01T00:00:00.000Z';
+                    const date = new Date(str);
+                    const v = enforcer({type: 'string', format: 'date'}, {}, options).enforce(date);
+                    expect(v).to.equal(str.substr(0, 10));
+                });
+
+                it('dateTime', () => {
+                    const str = '2000-01-01T00:00:00.000Z';
+                    const date = new Date(str);
+                    const v = enforcer({type: 'string', format: 'date-time'}, {}, options).enforce(date);
+                    expect(v).to.equal(str);
+                });
+
             });
 
-            it('boolean', () => {
-                const v = enforcer({ type: 'boolean' }, {}, options).enforce('');
-                expect(v).to.equal(false);
-            });
-
-            it('integer', () => {
-                const v = enforcer({ type: 'integer' }, {}, options).enforce('1.2');
-                expect(v).to.equal(1);
-            });
-
-            it('number', () => {
-                const v = enforcer({ type: 'number' }, {}, options).enforce('1.2');
-                expect(v).to.equal(1.2);
-            });
-
-            it('binary', () => {
-                const v = enforcer({ type: 'string', format: 'binary' }, {}, options).enforce(1);
-                expect(v).to.equal('00000001');
-            });
-
-            it('byte', () => {
-                const v = enforcer({ type: 'string', format: 'byte' }, {}, options).enforce(true);
-                expect(v).to.equal('AQ==');
-            });
-
-            it('date', () => {
-                const str = '2000-01-01T00:00:00.000Z';
-                const date = new Date(str);
-                const v = enforcer({ type: 'string', format: 'date' }, {}, options).enforce(date);
-                expect(v).to.equal(str.substr(0, 10));
-            });
-
-            it('dateTime', () => {
-                const str = '2000-01-01T00:00:00.000Z';
-                const date = new Date(str);
-                const v = enforcer({ type: 'string', format: 'date-time' }, {}, options).enforce(date);
-                expect(v).to.equal(str);
-            });
-
-        });
+        }
 
         describe('construct', () => {
 
