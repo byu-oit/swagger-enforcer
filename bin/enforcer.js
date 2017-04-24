@@ -114,13 +114,11 @@ Enforcer.prototype.enforce = function (initial) {
 };
 
 Enforcer.prototype.errors = function (value) {
-    const options = this.options;
     const schema = this.schema;
     return new Validator(this.definitions, false).validate(schema, '/', value).errors;
 };
 
 Enforcer.prototype.validate = function (value) {
-    const options = this.options;
     const schema = this.schema;
     new Validator(this.definitions, false).validate(schema, '/', value).throw();
 };
@@ -128,10 +126,10 @@ Enforcer.prototype.validate = function (value) {
 /**
  * Create an array with schema enforcement.
  * @param {Validator} validator
- * @param {object} schema The schema definition.
- * @param {object} options The options configuration.
- * @param {array} initial The array to initialize from.
- * @returns {*[]}
+ * @param {Object} schema The schema definition.
+ * @param {Object} options The options configuration.
+ * @param {Array} initial The array to initialize from.
+ * @returns {Array}
  */
 function arrayProxy(validator, schema, options, initial) {
 
