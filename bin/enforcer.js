@@ -51,6 +51,9 @@ function Enforcer(schema, definitions, options) {
     options = schemas.enforcer.normalize(options);
     if (straightEnforcement) Object.keys(options.enforce).forEach(key => options.enforce[key] = straightEnforcementValue);
 
+    // prep the schema for each definition
+    Object.keys(definitions).forEach(key => definitions[key] = new PreppedSchema(definitions[key], options));
+
     Object.defineProperties(factory, {
 
         /**
@@ -87,9 +90,8 @@ Enforcer.prototype.enforce = function (initial) {
     const validator = new Validator(this.definitions, true);
     if (!canProxy.proxiable) validator.error('', 'Your version of JavaScript does not support proxying.', 'PROX');
 
-
     // determine initial value if not provided
-    if (arguments.length < 2) {
+    if (arguments.length < 1) {
         if (options.useDefaults && schema.hasOwnProperty('default')) {
             initial = copy(schema.default);
         } else if (schema.type === 'array') {
