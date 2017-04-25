@@ -6,3 +6,5 @@ enforcer.is                 = require('./bin/is');
 enforcer.release            = require('./bin/release');
 enforcer.same               = require('./bin/same');
 enforcer.to                 = require('./bin/convert-to');
+
+module.exports = enforcer;
