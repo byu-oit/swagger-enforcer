@@ -1,8 +1,11 @@
+[![Build Status](https://travis-ci.org/byu-oit-appdev/swagger-enforcer.svg?branch=master)](https://travis-ci.org/byu-oit-appdev/swagger-enforcer)
+[![Coverage Status](https://coveralls.io/repos/github/byu-oit-appdev/swagger-enforcer/badge.svg?branch=master)](https://coveralls.io/github/byu-oit-appdev/swagger-enforcer?branch=master)
+
 # Swagger-Enforcer
 
 Automatically validate a value against the swagger schema while you build it. Alternatively you can validate the final value.
 
-To validate while building ([enforce](#enforcerprototypeenforce)), this package requires support of the [native Proxy interface](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy). For NodeJS that means version 6.0.0 and newer. If your node version is lower than that you can still validate the final object ([validate](#enforcerprototypevalidate)).
+To validate while building ([enforce](#enforcerprototypeenforce)), this package requires support of the [native Proxy interface](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy). For NodeJS that means version 6.0.0 and newer. If your node version is lower than that you can still validate the final value ([validate](#enforcerprototypevalidate)) but will be unable to [enforce](#enforcerprototypeenforce) while building.
 
 ## Contents
 
@@ -54,7 +57,7 @@ obj.str = 'abc';        // throws an error because 'abc' is not in enum
 
 #### Example 2
 
-**Validate the Final Object ([validate](#enforcerprototypevalidate))**
+**Validate the Final Value ([validate](#enforcerprototypevalidate))**
 
 ```js
 const Enforcer = require('swagger-enforcer');
@@ -142,17 +145,25 @@ Produce an enforcer instance that can enforce a swagger schema while you build t
         },
         Cat: {
             type: 'object',
-            properties: {
-                name: {
-                    type: 'string'
+            allOf: [
+                {
+                    $ref: '#/definitions/Pet'
                 },
-                petType: {
-                    type: 'string'
-                },
-                huntingSkill: {
-                    type: string
+                {
+                    type: 'object',
+                    properties: {
+                        name: {
+                            type: 'string'
+                        },
+                        petType: {
+                            type: 'string'
+                        },
+                        huntingSkill: {
+                            type: string
+                        }
+                    }                
                 }
-            }
+            ]
         }
     }
     ```
@@ -178,8 +189,7 @@ Produce an enforcer instance that can enforce a swagger schema while you build t
             minProperties: false,
             required: false
         },
-        useDefaults: false,
-        validateAll: true
+        useDefaults: false
     }
     ```
 
@@ -197,7 +207,7 @@ Validate an object while you build it.
 
 * *initial* - An optional value to initialize the enforcement with.
  
-**Returns** - A proxied object or array if the schema is for an object or an array. Any modifications to the object or array will automatically be run through a performance optimized validation. If the schema is for a non-object or non-array then the value cannot be proxied.
+**Returns** - A proxied object or array if the schema is for an object or an array. Any modifications to the object or array will automatically be run through a performance optimized validation sequence. If the schema is for a non-object or non-array then the value cannot be proxied.
 
 **Example** - [See Example 1](#example-1)
 
@@ -205,7 +215,7 @@ Validate an object while you build it.
 
 ### Enforcer.prototype.errors
 
-Validate an object as if it were fully built. An array is returned with any errors that were encountered.
+Validate a value as if it were fully built. An array is returned with any errors that were encountered.
 
 **Signature:** `.errors ( value ) : Error[]`
 
@@ -219,7 +229,7 @@ Validate an object as if it were fully built. An array is returned with any erro
 
 ### Enforcer.prototype.validate
 
-Validate an object as if it were fully built. If validation fails then an error will be thrown.
+Validate a value as if it were fully built. If validation fails then an error will be thrown.
 
 **Signature:** `.validate ( value ) : undefined`
 
@@ -243,7 +253,7 @@ A static method that will find and replace string parameters with new values.
 
 * *value* - The value to begin traversing and looking for strings to replace.
 
-* *parameters* - An objects with keys and values that represent what to replace in each string.
+* *parameters* - An object with keys and values that represent what to replace in each string.
  
 * *options* - Configuration options:
 
@@ -512,7 +522,7 @@ Convert a value into a boolean.
 **Returns:** A boolean.
 
 ```js
-Enforcer.to.byte('hello');    // true
+Enforcer.to.boolean('hello');    // true
 ```
 
 [Back to API Table of Contents](#api)
@@ -548,7 +558,7 @@ Convert a value into a date encoded string.
 **Returns:** A date encoded string of the format `YYYY-MM-DD`.
 
 ```js
-Enforcer.to.date(new Date(2000, 0, 0, 0, 0, 0, 0));    // '2000-01-01'
+Enforcer.to.date(new Date(2000, 0, 1, 0, 0, 0, 0));    // '2000-01-01'
 ```
 
 [Back to API Table of Contents](#api)
@@ -566,7 +576,7 @@ Convert a value into a date encoded string.
 **Returns:** A date encoded string of the format `YYYY-MM-DDTHH:mm:ss:uuuZ`.
 
 ```js
-Enforcer.to.dateTime(new Date(2000, 0, 0, 0, 0, 0, 0));    // '2000-01-01T00:00:00.000Z'
+Enforcer.to.dateTime(new Date(2000, 0, 1, 0, 0, 0, 0));    // '2000-01-01T00:00:00.000Z'
 ```
 
 [Back to API Table of Contents](#api)
@@ -609,9 +619,36 @@ Enforcer.to.number('1.23');    // 1.23
 
 ## Enforcement Options
 
-* *autoFormat* - Whether to attempt to convert any values being set to their appropriate types. For example, if a schema expects a string of format `date-time` and this option is set to `true` then you can set the schema using a `Date` object and that object will automatically be converted to a string in `date-time` format. The advantage of using this is that it means you don't need to explicitly use the [conversion to api](#enforcerto) but the disadvantage is that it may obscure some errors if the conversion shouldn't have happened. Defaults to `false`,
+The following object shows the defaults for enforcement:
+
+```
+{
+    autoFormat: false,
+    enforce: {
+        enum: true,
+        maxItems: true,
+        minItems: false,
+        uniqueItems: true,
+        multipleOf: true,
+        maximum: true,
+        minimum: true,
+        maxLength: true,
+        minLength: true,
+        pattern: true,
+        additionalProperties: true,
+        maxProperties: true,
+        minProperties: false,
+        required: false
+    },
+    useDefaults: false
+}
+```
+
+Below is an explanation of each option:
+
+* *autoFormat* - Whether to attempt to convert any values being set to their appropriate types. For example, if a schema expects a string of format `date-time` and this option is set to `true` then you can set the schema using a `Date` object and that object will automatically be converted to a string in `date-time` format. The advantage of using this is that it means you can skip to explicit use of the [conversion to api](#enforcerto) but the disadvantage is that it may obscure some errors if the conversion shouldn't have happened. Defaults to `false`.
   
-* *enforce* - The validation rules to enforce while building the response object.
+* *enforce* - An object specifying the validation rules to enforce while building or validating a schema. If this value is set to `true` then all enforcement properties will be set to `true`. Conversely, if this value is set to `false` then all enforcement properties will be set to `false`. Some properties default to being disabled (`false`) because they would make it hard to build an object that is under active enforcement.
 
     **General Enforcement**
     
@@ -649,8 +686,6 @@ Enforcer.to.number('1.23');    // 1.23
     
     * *minProperties* - Enforce minProperties validation for numbers and integers. Defaults to `false`.
     
-    * *required* - Enforce pattern matching. If enabled then any objects being set into the response must already have required values. Defaults to `false`.
+    * *required* - Enforce that required properties are set. Defaults to `false`.
 
 * *useDefaults* - Whether to use default values to build out the swagger response object automatically, as much as possible. Defaults to `false`.
-
-* *validateAll* - When `true`, enable all all enforcement rules if validating the final object. Defaults to `true`. 
