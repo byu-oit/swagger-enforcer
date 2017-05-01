@@ -107,7 +107,7 @@ Enforcer.prototype.enforce = function (initial) {
     initial = autoFormat(schema, options, initial);
 
     // validate initial value
-    validator.validate(schema, '/', initial);
+    validator.validate(schema, '', initial);
 
     // return proxy
     return getProxy(validator, schema, options, initial);
@@ -115,12 +115,12 @@ Enforcer.prototype.enforce = function (initial) {
 
 Enforcer.prototype.errors = function (value) {
     const schema = this.schema;
-    return new Validator(this.definitions, false).validate(schema, '/', value).errors;
+    return new Validator(this.definitions, false).validate(schema, '', value).errors;
 };
 
 Enforcer.prototype.validate = function (value) {
     const schema = this.schema;
-    new Validator(this.definitions, false).validate(schema, '/', value).throw();
+    new Validator(this.definitions, false).validate(schema, '', value).throw();
 };
 
 /**
