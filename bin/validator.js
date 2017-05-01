@@ -415,7 +415,7 @@ Validator.prototype.string = function(schema, at, string) {
 Validator.prototype.throw = function() {
     const length = this.errors.length;
     if (length === 1) {
-        throw Error(this.errors[0].toString());
+        throw this.errors[0];
     } else if (length > 1) {
         throw buildError('', "Validation failed due to one or more errors:\n\t" + this.errors.join('\n\t'), 'MLTI');
     }
