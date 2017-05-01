@@ -126,6 +126,8 @@ Produce an enforcer instance that can enforce a swagger schema while you build t
 
 **Parameters:**
 
+* *schema* - The swagger schema to use for enforcement of values.
+
 * *definitions* - An object containing definitions by name. Definitions are only necessary if using discriminators.
 
     ```
