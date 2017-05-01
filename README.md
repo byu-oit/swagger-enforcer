@@ -203,6 +203,8 @@ Produce an enforcer instance that can enforce a swagger schema while you build t
 
 Validate an object while you build it.
 
+This method requires that your running a version of JavaScript that supports the [native Proxy interface](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy).
+
 **Signature:** `.enforce ( [ initial ]) : *`
 
 **Parameters:**
