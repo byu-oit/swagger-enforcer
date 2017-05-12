@@ -98,7 +98,7 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
     - [Enforcer.prototype.enforce](#enforcerprototypeenforce) - Create an object with enforcement.
     - [Enforcer.prototype.errors](#enforcerprototypeerrors) - Run a full validation of an value and get back an array of Error objects.
     - [Enforcer.prototype.validate](#enforcerprototypevalidate) - Run a full validation of an value.
-- [Enforcer.injectParameters](#enforcer-injectparameters) - Replace string parameters.
+- [Enforcer.injectParameters](#enforcerinjectparameters) - Replace string parameters.
 - [Enforcer.is](#enforcerisbinary) - Type checking.
     - [binary](#enforceris)
     - [boolean](#enforcerisboolean)
