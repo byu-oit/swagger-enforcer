@@ -264,17 +264,18 @@ function objectProxy(validator, schema, options, initial) {
             }
         },
         set: function(target, property, value) {
-            value = applyDefaults(schema, options, value);
-            value = autoFormat(schema, options, value);
+            const subSchema = schema.properties && schema.properties[property]
+                ? schema.properties[property]
+                : schema.additionalProperties;
+
+            value = applyDefaults(subSchema, options, value);
+            value = autoFormat(subSchema, options, value);
             validator.serializable('', value);
 
             const schemas = validator.objectSchemas(schema, '', target);
             validator.objectPropertyLength(schemas, '', target, property, true);
             validator.objectProperty(schemas, '', value, property);
 
-            const subSchema = schema.properties && schema.properties[property]
-                ? schema.properties[property]
-                : schema.additionalProperties;
             target[property] = subSchema ? getProxy(validator, subSchema, options, value) : value;
 
             validator.objectHasRequiredProperties(schemas, '', target);
