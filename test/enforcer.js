@@ -577,7 +577,13 @@ describe('enforcer', () => {
                     const options = schemas.enforcer.normalize({ enforce: { required: true }});
 
                     it('top level omitted', () => {
-                        const schema = { type: 'object', properties: { foo: { required: true } } };
+                        const schema = {
+                            type: 'object',
+                            properties: {
+                                foo: { type: 'string' }
+                            },
+                            required: ['foo']
+                        };
                         expect(code(() => enforcer(schema, {}, options).enforce({}))).to.equal('ESEREQ');
                     });
 
@@ -588,10 +594,9 @@ describe('enforcer', () => {
                                 foo: {
                                     type: 'object',
                                     properties: {
-                                        bar: {
-                                            required: true
-                                        }
-                                    }
+                                        bar: { type: 'string' }
+                                    },
+                                    required: ['bar']
                                 }
                             }
                         };
@@ -606,10 +611,9 @@ describe('enforcer', () => {
                             additionalProperties: {
                                 type: 'object',
                                 properties: {
-                                    id: {
-                                        required: true
-                                    }
-                                }
+                                    id: { type: 'string' }
+                                },
+                                required: ['id']
                             }
                         };
 
@@ -619,15 +623,21 @@ describe('enforcer', () => {
                     });
 
                     it('cannot delete required property', () => {
-                        const schema = { type: 'object', properties: { foo: { required: true } } };
+                        const schema = {
+                            type: 'object',
+                            properties: {
+                                foo: { type: 'number' }
+                            },
+                            required: ['foo']
+                        };
                         const o = enforcer(schema, {}, options).enforce({ foo: 1 });
                         expect(code(() => delete o.foo)).to.equal('ESEREQ');
                     });
 
                     it('set all of', () => {
                         const schema = { allOf: [
-                            { properties: { foo: { required: true } } },
-                            { properties: { foo: { type: 'string' } } }
+                            { properties: { foo: { type: 'string' } }, required: ['foo'] },
+                            { properties: { foo: { type: 'string', maxLength: 20 } } }
                         ]};
                         const o = enforcer(schema, {}, options).enforce({ foo: 'a' });
                         o.foo = 'b';
@@ -635,8 +645,8 @@ describe('enforcer', () => {
 
                     it('delete all of', () => {
                         const schema = { allOf: [
-                            { properties: { foo: { required: true } } },
-                            { properties: { foo: { type: 'string' } } }
+                            { properties: { foo: { type: 'string' } }, required: ['foo'] },
+                            { properties: { foo: { type: 'string', maxLength: 20 } } }
                         ]};
                         const o = enforcer(schema, {}, options).enforce({ foo: 'a' });
                         expect(code(() => delete o.foo)).to.equal('ESEREQ');

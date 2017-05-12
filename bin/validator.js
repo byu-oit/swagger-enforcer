@@ -591,7 +591,7 @@ function errorToString() {
 }
 
 function objectPropertyRequired(context, schema, at, property) {
-    if (schema.properties && schema.properties[property] && schema.properties[property].required) {
+    if (schema.required && schema.required.indexOf(property) !== -1) {
         context.error(at, 'Missing required property: ' + property, 'REQ');
     }
 }
