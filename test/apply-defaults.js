@@ -87,6 +87,19 @@ describe('apply defaults', () => {
             expect(o).to.deep.equal({ foo: { num: 1 }, bar: { num: 0 } });
         });
 
+        it('object with partial value', () => {
+            const schema = {
+                type: 'object',
+                properties: {
+                    foo: { type: 'string' },
+                    bar: { type: 'string', default: 'bar' }
+                },
+                required: ['foo']
+            };
+            const o = applyDefaults(schema, options, { foo: 'abc' });
+            expect(o).to.deep.equal({ foo: 'abc', bar: 'bar' });
+        });
+
         it('array', () => {
             const schema = {
                 type: 'array',

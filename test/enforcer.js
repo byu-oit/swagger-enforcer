@@ -66,6 +66,26 @@ describe('enforcer', () => {
                     expect(enforcer(schema, {}, options).enforce()).to.equal('abc');
                 });
 
+                it('nested partial application', () => {
+                    const options = schemas.enforcer.normalize({ useDefaults: true });
+                    const schema = {
+                        type: 'object',
+                        properties: {
+                            value: {
+                                type: 'object',
+                                properties: {
+                                    foo: { type: 'string' },
+                                    bar: { type: 'string', default: 'bar' }
+                                },
+                                required: ['foo']
+                            }
+                        }
+                    };
+                    const o = enforcer(schema, {}, options).enforce();
+                    o.value = { foo: 'abc' };
+                    expect(o).to.deep.equal({ value: { foo: 'abc', bar: 'bar' } });
+                });
+
             });
 
             describe('array', () => {
