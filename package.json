@@ -1,6 +1,6 @@
 {
   "name": "swagger-enforcer",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Automatically validate a value against the swagger schema while you build it. Alternatively you can validate the final value.",
   "main": "index.js",
   "directories": {
