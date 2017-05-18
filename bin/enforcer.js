@@ -56,7 +56,8 @@ function Enforcer(schema, definitions, options) {
     if (straightEnforcement) Object.keys(options.enforce).forEach(key => options.enforce[key] = straightEnforcementValue);
 
     // prep the schema for each definition
-    Object.keys(definitions).forEach(key => definitions[key] = new PreppedSchema(definitions[key], options));
+    const preppedDefinitions = {};
+    Object.keys(definitions).forEach(key => preppedDefinitions[key] = new PreppedSchema(definitions[key], options));
 
     Object.defineProperties(factory, {
 
@@ -65,7 +66,7 @@ function Enforcer(schema, definitions, options) {
          * @type {Object}
          */
         definitions: {
-            value: definitions
+            value: preppedDefinitions
         },
 
         /**
