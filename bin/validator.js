@@ -540,10 +540,10 @@ function allOf(context, schemas, callback) {
 }
 
 function buildError(at, message, code) {
+    if (at) message += ' [at ' + at + ']';
     const err = Error(message);
     err.at = at;
     err.code = 'ESE' + code;
-    err.toString = errorToString;
     return err;
 }
 
@@ -583,11 +583,6 @@ function buildObjectInheritances(store, schema, at) {
             }
         }
     }
-}
-
-function errorToString() {
-    const at = this.at;
-    return 'Error' + (at ? ' at ' + at : '') + ': ' + this.message;
 }
 
 function objectPropertyRequired(context, schema, at, property) {
