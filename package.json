@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/byu-oit-appdev/swagger-enforcer.git"
+    "url": "git+https://github.com/byu-oit/swagger-enforcer.git"
   },
   "keywords": [
     "swagger",
@@ -25,9 +25,9 @@
   "author": "James Speirs",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/byu-oit-appdev/swagger-enforcer/issues"
+    "url": "https://github.com/byu-oit/swagger-enforcer/issues"
   },
-  "homepage": "https://github.com/byu-oit-appdev/swagger-enforcer#readme",
+  "homepage": "https://github.com/byu-oit/swagger-enforcer#readme",
   "devDependencies": {
     "chai": "^3.5.0",
     "coveralls": "^2.13.0",

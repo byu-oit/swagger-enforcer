@@ -14,8 +14,8 @@ ddd:
   ubiquitous_language_url: 
   context_map_url: 
 links:
-  system_documentation_url: https://github.com/byu-oit-appdev/swagger-enforcer
-  source_repo_url: https://github.com/byu-oit-appdev/swagger-enforcer
+  system_documentation_url: https://github.com/byu-oit/swagger-enforcer
+  source_repo_url: https://github.com/byu-oit/swagger-enforcer
   swagger_urls:
 microservice: False
 technologies_used:
@@ -23,7 +23,7 @@ technologies_used:
 stages:
   production:
     urls:
-      product_page: https://github.com/byu-oit-appdev/swagger-enforcer
+      product_page: https://github.com/byu-oit/swagger-enforcer
       physical_url: 
       virtual_url: 
     hosting_location: 
@@ -47,5 +47,5 @@ tags:
   env: prd
   app: swagger-enforcer
   team: gro:AD-Miscellaneous Information Applications
-federation_json_url: https://raw.githubusercontent.com/byu-oit-appdev/swagger-enforcer/master/.repo-meta.yml
+federation_json_url: https://raw.githubusercontent.com/byu-oit/swagger-enforcer/master/.repo-meta.yml
 
