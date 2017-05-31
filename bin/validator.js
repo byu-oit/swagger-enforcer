@@ -23,11 +23,13 @@ module.exports = Validator;
 
 /**
  * Define a validator instance.
+ * @param {object} enforce
  * @param {object} definitions
  * @param {boolean} [throwErrors=false]
  * @constructor
  */
-function Validator(definitions, throwErrors) {
+function Validator(enforce, definitions, throwErrors) {
+    this.enforce = enforce;
     this.definitions = definitions;
     this.errors = throwErrors ? undefined : [];
 }
@@ -88,14 +90,15 @@ Validator.prototype.arrayItems = function(schema, at, target, items) {
  * @returns {Validator}
  */
 Validator.prototype.arrayLength = function(schema, at, length) {
+    const enforce = this.enforce;
 
     // validate max items
-    if (schema.hasOwnProperty('maxItems') && length > schema.maxItems) {
+    if (enforce.maxItems && schema.hasOwnProperty('maxItems') && length > schema.maxItems) {
         this.error(at, 'Array length is greater than allowable maximum length', 'LEN');
     }
 
     // validate min items
-    if (schema.hasOwnProperty('minItems') && length < schema.minItems) {
+    if (enforce.minItems && schema.hasOwnProperty('minItems') && length < schema.minItems) {
         this.error(at, 'Array length is less than allowable minimum length', 'LEN');
     }
 
@@ -111,7 +114,8 @@ Validator.prototype.arrayLength = function(schema, at, length) {
  * @returns {Validator}
  */
 Validator.prototype.arrayUniqueItem = function(schema, at, array, item) {
-    if (schema.uniqueItems && array.find(x => same(x, item))) {
+    const enforce = this.enforce;
+    if (enforce.uniqueItems && schema.uniqueItems && array.find(x => same(x, item))) {
         this.error(at, 'Array requires that all items be unique. Value is a duplicate: ' + item, 'UNIQ');
     }
     return this;
@@ -126,7 +130,8 @@ Validator.prototype.arrayUniqueItem = function(schema, at, array, item) {
  * @returns {Validator}
  */
 Validator.prototype.arrayUniqueItems = function(schema, at, array, items) {
-    if (schema.uniqueItems) {
+    const enforce = this.enforce;
+    if (enforce.uniqueItems && schema.uniqueItems) {
         const length = items.length;
         const copy = array.slice(0);
         for (let i = 0; i < length; i++) {
@@ -145,7 +150,8 @@ Validator.prototype.arrayUniqueItems = function(schema, at, array, items) {
  * @returns {Validator}
  */
 Validator.prototype.enum = function(schema, at, value) {
-    if (schema.enum) {
+    const enforce = this.enforce;
+    if (enforce.enum && schema.enum) {
         let found = false;
         const length = schema.enum.length;
         for (let i = 0; i < length; i++) {
@@ -185,9 +191,10 @@ Validator.prototype.error = function(at, message, code) {
  * @returns {Validator}
  */
 Validator.prototype.number = function(schema, at, number) {
+    const enforce = this.enforce;
 
     // validate maximum
-    if (schema.hasOwnProperty('maximum')) {
+    if (enforce.maximum && schema.hasOwnProperty('maximum')) {
         if (schema.exclusiveMaximum && number === schema.maximum) {
             this.error(at, 'Value ' + number + ' over exclusive maximum ' + schema.maximum, 'NMAX');
         }
@@ -197,7 +204,7 @@ Validator.prototype.number = function(schema, at, number) {
     }
 
     // validate minimum
-    if (schema.hasOwnProperty('minimum')) {
+    if (enforce.minimum && schema.hasOwnProperty('minimum')) {
         if (schema.exclusiveMinimum && number === schema.minimum) {
             this.error(at, 'Value ' + number + ' under exclusive minimum ' + schema.minimum, 'NMIN');
         }
@@ -207,7 +214,7 @@ Validator.prototype.number = function(schema, at, number) {
     }
 
     // validate multiple of
-    if (schema.hasOwnProperty('multipleOf') && number % schema.multipleOf !== 0) {
+    if (enforce.multipleOf && schema.hasOwnProperty('multipleOf') && number % schema.multipleOf !== 0) {
         this.error(at, 'Value ' + number + ' not a multiple of ' + schema.multipleOf, 'NMULT');
     }
 
@@ -261,6 +268,7 @@ Validator.prototype.objectSchemas = function(schema, at, object) {
     buildObjectInheritances(store, schema, at, true);
 
     return store.schemas;
+    const enforce = this.enforce;
 };
 
 /**
@@ -273,6 +281,7 @@ Validator.prototype.objectSchemas = function(schema, at, object) {
  * @returns {Validator}
  */
 Validator.prototype.objectPropertyLength = function(schemas, at, object, property, setting) {
+    const enforce = this.enforce;
     const objectProvided = typeof object === 'object';
     let length = objectProvided ? Object.keys(object).length : object;
     if (objectProvided && arguments.length > 3) {
@@ -285,11 +294,11 @@ Validator.prototype.objectPropertyLength = function(schemas, at, object, propert
     }
     allOf(this, schemas, function(schema) {
 
-        if (schema.hasOwnProperty('maxProperties') && length > schema.maxProperties) {
+        if (enforce.maxProperties && schema.hasOwnProperty('maxProperties') && length > schema.maxProperties) {
             this.error(at, 'The object has more properties than the allowed maximum: ' + schema.maxProperties, 'LEN');
         }
 
-        if (schema.hasOwnProperty('minProperties') && length < schema.minProperties) {
+        if (enforce.minProperties && schema.hasOwnProperty('minProperties') && length < schema.minProperties) {
             this.error(at, 'The object has fewer properties than the allowed minimum: ' + schema.minProperties, 'LEN');
         }
     });
@@ -304,15 +313,18 @@ Validator.prototype.objectPropertyLength = function(schemas, at, object, propert
  * @returns {Validator}
  */
 Validator.prototype.objectHasRequiredProperties = function(schemas, at, object) {
+    const enforce = this.enforce;
     const valueProperties = Object.keys(object);
     const self = this;
-    allOf(this, schemas, function (schema) {
-        if (schema.properties) {
-            const missingProperties = Object.keys(schema.properties)
-                .filter(property => valueProperties.indexOf(property) === -1);
-            missingProperties.forEach(property => objectPropertyRequired(self, schema, at + '/' + property, property));
-        }
-    });
+    if (enforce.required) {
+        allOf(this, schemas, function (schema) {
+            if (schema.properties) {
+                const missingProperties = Object.keys(schema.properties)
+                    .filter(property => valueProperties.indexOf(property) === -1);
+                missingProperties.forEach(property => objectPropertyRequired(self, schema, at + '/' + property, property));
+            }
+        });
+    }
     return this;
 };
 
@@ -325,6 +337,7 @@ Validator.prototype.objectHasRequiredProperties = function(schemas, at, object) 
  * @returns {Validator}
  */
 Validator.prototype.objectProperty = function(schemas, at, value, property) {
+    const enforce = this.enforce;
     let hasPropertyEnforcement = false;
     let propertyAllowed = false;
 
@@ -334,7 +347,7 @@ Validator.prototype.objectProperty = function(schemas, at, value, property) {
             propertyAllowed = true;
             this.validate(schema.properties[property], at, value);
 
-        } else if (schema.additionalProperties) {
+        } else if (enforce.additionalProperties && schema.additionalProperties) {
             propertyAllowed = true;
             this.validate(schema.additionalProperties, at, value);
 
@@ -358,7 +371,10 @@ Validator.prototype.objectProperty = function(schemas, at, value, property) {
  * @returns {Validator}
  */
 Validator.prototype.objectPropertyRequired = function(schemas, at, property) {
-    allOf(this, schemas, schema => objectPropertyRequired(this, schema, at, property));
+    const enforce = this.enforce;
+    if (enforce.required) {
+        allOf(this, schemas, schema => objectPropertyRequired(this, schema, at, property));
+    }
     return this;
 };
 
@@ -387,20 +403,21 @@ Validator.prototype.serializable = function(at, value) {
  * @returns {Validator}
  */
 Validator.prototype.string = function(schema, at, string) {
+    const enforce = this.enforce;
     const length = string.length;
 
     // validate max length
-    if (schema.hasOwnProperty('maxLength') && length > schema.maxLength) {
+    if (enforce.maxLength && schema.hasOwnProperty('maxLength') && length > schema.maxLength) {
         this.error(at, 'Value ' + string + ' has length (' + length + ') above max length ' + schema.maxLength, 'SMAX');
     }
 
     // validate min length
-    if (schema.hasOwnProperty('minLength') && length < schema.minLength) {
+    if (enforce.minLength && schema.hasOwnProperty('minLength') && length < schema.minLength) {
         this.error(at, 'Value ' + string + ' has length (' + length + ') below min length ' + schema.minLength, 'SMIN');
     }
 
     // validate pattern
-    if (schema.hasOwnProperty('pattern') && !(new RegExp(schema.pattern)).test(string)) {
+    if (enforce.pattern && schema.hasOwnProperty('pattern') && !(new RegExp(schema.pattern)).test(string)) {
         this.error(at, 'Value ' + string + ' does not match pattern ' + schema.pattern, 'SPAT');
     }
 
