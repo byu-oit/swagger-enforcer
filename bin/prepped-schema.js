@@ -39,7 +39,7 @@ function PreppedSchema(schema, options) {
         'maxItems', 'minItems', 'uniqueItems',
         'additionalProperties', 'maxProperties', 'minProperties', 'required'
     ].forEach(key => {
-        if (!enforce[key] || !prepped.hasOwnProperty(key)) delete prepped[key]
+        if (!enforce[key] || prepped.hasOwnProperty(key)) delete prepped[key]
     });
 
     if (this.type === 'array') {
