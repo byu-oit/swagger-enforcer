@@ -16,6 +16,7 @@
  **/
 'use strict';
 const copy          = require('./copy');
+const getSchemaType = require('./schema-type');
 
 module.exports = function(schema, options, value) {
     return applyDefaults.apply(null, arguments).value;
@@ -23,6 +24,7 @@ module.exports = function(schema, options, value) {
 
 function applyDefaults(schema, options, value) {
     if (options.useDefaults) {
+        const type = getSchemaType(schema);
         const valueNotProvided = arguments.length < 3;
 
         if (valueNotProvided && schema.hasOwnProperty('default')) {
@@ -31,7 +33,7 @@ function applyDefaults(schema, options, value) {
                 value: copy(schema.default)
             };
 
-        } else if (schema.type === 'array') {
+        } else if (type === 'array') {
             if (!Array.isArray(value) || !schema.items) return {
                 applied: false,
                 value: value
@@ -47,7 +49,7 @@ function applyDefaults(schema, options, value) {
                 value: setDefault ? result : value
             };
 
-        } else if (schema.type === 'object') {
+        } else if (type === 'object') {
 
             // if the value was provided but is not an object then return the value as provided
             if (!valueNotProvided && (!value || typeof value !== 'object')) return {

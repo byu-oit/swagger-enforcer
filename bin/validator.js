@@ -15,6 +15,7 @@
  *    limitations under the License.
  **/
 'use strict';
+const getSchemaType = require('./schema-type');
 const is            = require('./is');
 const rx            = require('./rx');
 const same          = require('./same');
@@ -268,7 +269,6 @@ Validator.prototype.objectSchemas = function(schema, at, object) {
     buildObjectInheritances(store, schema, at, true);
 
     return store.schemas;
-    const enforce = this.enforce;
 };
 
 /**
@@ -447,26 +447,27 @@ Validator.prototype.throw = function() {
  * @returns {Validator}
  */
 Validator.prototype.type = function(schema, at, value) {
+    const type = getSchemaType(schema);
     const valueType = typeof value;
     let code = 'TYPE';
     let expected = '';
 
-    if (schema.type === 'array' && !Array.isArray(value)) {
+    if (type === 'array' && !Array.isArray(value)) {
         expected = 'an array';
 
-    } else if (schema.type === 'object' && (!value || valueType !== 'object' || Array.isArray(value))) {
+    } else if (type === 'object' && (!value || valueType !== 'object' || Array.isArray(value))) {
         expected = 'a non-null object';
 
-    } else if (schema.type === 'boolean' && valueType !== 'boolean') {
+    } else if (type === 'boolean' && valueType !== 'boolean') {
         expected = 'a boolean';
 
-    } else if (schema.type === 'number' && ((valueType !== 'number' || isNaN(value)))) {
+    } else if (type === 'number' && ((valueType !== 'number' || isNaN(value)))) {
         expected = 'a number';
 
-    } else if (schema.type === 'integer' && ((valueType !== 'number' || isNaN(value) || !Number.isInteger(value)))) {
+    } else if (type === 'integer' && ((valueType !== 'number' || isNaN(value) || !Number.isInteger(value)))) {
         expected = 'an integer';
 
-    } else if (schema.type === 'string') {
+    } else if (type === 'string') {
         if (valueType !== 'string') {
             expected = 'a string';
         } else {
@@ -516,16 +517,17 @@ Validator.prototype.type = function(schema, at, value) {
  * @returns {Validator}
  */
 Validator.prototype.validate = function(schema, at, value) {
+    const type = getSchemaType(schema);
 
     // if no schema then we're done validating-
-    if (!schema || (!schema.type && !schema.enum)) return this;
+    if (!schema || (!type && !schema.enum)) return this;
 
     // validate serializable and type
     this.serializable(at, value);
     this.type(schema, at, value);
 
     // validate type specific
-    switch (schema.type) {
+    switch (type) {
         case 'array':
             this.array(schema, at, value);
             break;

@@ -18,6 +18,7 @@
 const applyDefaults     = require('./apply-defaults');
 const canProxy          = require('./can-proxy');
 const copy              = require('./copy');
+const getSchemaType     = require('./schema-type');
 const rx                = require('./rx');
 const same              = require('./same');
 const schemas           = require('./schemas');
@@ -363,13 +364,6 @@ function getProxy(validator, schema, options, value) {
     }
 
     return value;
-}
-
-function getSchemaType(schema) {
-    if (schema.type) return schema.type;
-    if (schema.items) return 'array';
-    if (schema.properties || schema.additionalProperties || schema.allOf) return 'object';
-    return undefined;
 }
 
 /**
