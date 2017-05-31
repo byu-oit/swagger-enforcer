@@ -18,7 +18,6 @@
 const applyDefaults     = require('./apply-defaults');
 const canProxy          = require('./can-proxy');
 const copy              = require('./copy');
-const PreppedSchema     = require('./prepped-schema');
 const rx                = require('./rx');
 const same              = require('./same');
 const schemas           = require('./schemas');
@@ -55,10 +54,6 @@ function Enforcer(schema, definitions, options) {
     options = schemas.enforcer.normalize(options);
     if (straightEnforcement) Object.keys(options.enforce).forEach(key => options.enforce[key] = straightEnforcementValue);
 
-    // prep the schema for each definition
-    const preppedDefinitions = {};
-    Object.keys(definitions).forEach(key => preppedDefinitions[key] = new PreppedSchema(definitions[key], options));
-
     Object.defineProperties(factory, {
 
         /**
@@ -66,7 +61,7 @@ function Enforcer(schema, definitions, options) {
          * @type {Object}
          */
         definitions: {
-            value: preppedDefinitions
+            value: definitions, //preppedDefinitions
         },
 
         /**
@@ -82,7 +77,7 @@ function Enforcer(schema, definitions, options) {
          * @type {Object}
          */
         schema: {
-            value: new PreppedSchema(schema, options)
+            value: schema //new PreppedSchema(schema, options)
         }
     });
 
@@ -92,16 +87,17 @@ function Enforcer(schema, definitions, options) {
 Enforcer.prototype.enforce = function (initial) {
     const options = this.options;
     const schema = this.schema;
-    const validator = new Validator(this.definitions, true);
+    const validator = new Validator(this.options.enforce, this.definitions, true);
     if (!canProxy.proxiable) validator.error('', 'Your version of JavaScript does not support proxying.', 'PROX');
 
     // determine initial value if not provided
     if (arguments.length < 1) {
+        const type = getSchemaType(schema);
         if (options.useDefaults && schema.hasOwnProperty('default')) {
             initial = copy(schema.default);
-        } else if (schema.type === 'array') {
+        } else if (type === 'array') {
             initial = applyDefaults(schema, options, []);
-        } else if (schema.type === 'object') {
+        } else if (type === 'object') {
             initial = applyDefaults(schema, options, {});
         }
     }
@@ -116,12 +112,12 @@ Enforcer.prototype.enforce = function (initial) {
 
 Enforcer.prototype.errors = function (value) {
     const schema = this.schema;
-    return new Validator(this.definitions, false).validate(schema, '', value).errors;
+    return new Validator(this.options.enforce, this.definitions, false).validate(schema, '', value).errors;
 };
 
 Enforcer.prototype.validate = function (value) {
     const schema = this.schema;
-    new Validator(this.definitions, false).validate(schema, '', value).throw();
+    new Validator(this.options.enforce, this.definitions, false).validate(schema, '', value).throw();
 };
 
 /**
@@ -321,7 +317,7 @@ function applyMultipleValueInitializations(schema, options, values) {
  */
 function autoFormat(schema, options, value) {
     if (schema && options.autoFormat) {
-        switch (schema.type) {
+        switch (getSchemaType(schema)) {
             case 'boolean': return to.boolean(value);
             case 'integer': return to.integer(value);
             case 'number':  return to.number(value);
@@ -346,7 +342,8 @@ function autoFormat(schema, options, value) {
  * @returns {*}
  */
 function getProxy(validator, schema, options, value) {
-    if (schema.type === 'array') {
+    const type = getSchemaType(schema);
+    if (type === 'array') {
         if (schema.items) {
             const length = value.length;
             for (let i = 0; i < length; i++) {
@@ -355,7 +352,7 @@ function getProxy(validator, schema, options, value) {
         }
         return arrayProxy(validator, schema, options, value);
 
-    } else if (schema.type === 'object') {
+    } else if (type === 'object') {
         const specifics = schema.properties || {};
         Object.keys(value)
             .forEach(key => {
@@ -366,6 +363,13 @@ function getProxy(validator, schema, options, value) {
     }
 
     return value;
+}
+
+function getSchemaType(schema) {
+    if (schema.type) return schema.type;
+    if (schema.items) return 'array';
+    if (schema.properties || schema.additionalProperties || schema.allOf) return 'object';
+    return undefined;
 }
 
 /**
