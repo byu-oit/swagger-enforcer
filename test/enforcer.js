@@ -102,6 +102,16 @@ describe('enforcer', () => {
                                         },
                                         str: {
                                             type: 'string'
+                                        },
+                                        obj: {
+                                            type: 'object',
+                                            properties: {
+                                                a: {
+                                                    type: 'string',
+                                                    default: 'a'
+                                                },
+                                                b: { type: 'string' }
+                                            }
                                         }
                                     }
                                 },
@@ -112,7 +122,11 @@ describe('enforcer', () => {
                     const o = enforcer(schema, {}, options).enforce();
                     expect(o.ar.length).to.equal(0);
                     o.ar.push({});
-                    expect(o.ar[0]).to.deep.equal({ num: 1 });
+                    expect(o.ar[0]).to.deep.equal({ num: 1, obj: { a: 'a' } });
+
+                    const o2 = { obj: { b: 'b' } };
+                    o.ar.push(o2);
+                    expect(o.ar[1]).to.deep.equal({ num: 1, obj: { a: 'a', b: 'b' }});
                 });
 
                 it('auto build for defaults', () => {
