@@ -86,6 +86,35 @@ describe('enforcer', () => {
                     expect(o).to.deep.equal({ value: { foo: 'abc', bar: 'bar' } });
                 });
 
+                it('object with array of objects', () => {
+                    const options = schemas.enforcer.normalize({ useDefaults: true });
+                    const schema = {
+                        type: 'object',
+                        properties: {
+                            ar: {
+                                type: 'array',
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        num: {
+                                            type: 'number',
+                                            default: 1
+                                        },
+                                        str: {
+                                            type: 'string'
+                                        }
+                                    }
+                                },
+                                default: []
+                            }
+                        }
+                    };
+                    const o = enforcer(schema, {}, options).enforce();
+                    expect(o.ar.length).to.equal(0);
+                    o.ar.push({});
+                    expect(o.ar[0]).to.deep.equal({ num: 1 });
+                });
+
                 it('auto build for defaults', () => {
                     const options = schemas.enforcer.normalize({ useDefaults: true });
                     const schema = {
