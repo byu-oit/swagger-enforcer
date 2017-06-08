@@ -67,8 +67,8 @@ function applyDefaults(schema, options, value) {
                 .forEach(property => {
                     const subSchema = schema.properties[property];
                     if (subSchema.required) requires.push(property);
-                    if ((subSchema.hasOwnProperty('default') || subSchema.type === 'object') && !result.hasOwnProperty(property)) {
-                        const data = applyDefaults(subSchema, options);
+                    if (subSchema.hasOwnProperty('default') || subSchema.type === 'object') {
+                        const data = result.hasOwnProperty(property) ? applyDefaults(subSchema, options, result[property]) : applyDefaults(subSchema, options);
                         if (data.applied) {
                             result[property] = data.value;
                             setDefault = true;
