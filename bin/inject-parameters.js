@@ -42,20 +42,63 @@ function injectParameters(value, parameters, options) {
 
     // get the normalized configuration
     if (!options || typeof options !== 'object') options = {};
-    if (!options.replacement) options.replacement = 'handlebar';
+    if (!options.replacement) options.replacement = injectParameters.defaults.replacement;
+    if (!options.hasOwnProperty('mutate')) options.mutate = injectParameters.defaults.mutate;
     const config = schemas.injector.normalize(options);
 
     // if replacement is a string then get associated function
     if (typeof config.replacement === 'string') config.replacement = injectorPatterns[config.replacement];
 
-    return inject(value, parameters, config);
+    return options.mutate ? injectMutate(value, parameters, config.replacement) : injectCopy(value, parameters, config.replacement);
 }
 
-function inject(value, parameters, options) {
+injectParameters.defaults = {
+    replacement: 'handlebar',
+    mutate: false
+};
+
+function injectMutate(value, parameters, replacement) {
     const valueType = typeof value;
 
     if (Array.isArray(value)) {
-        return value.map(item => inject(item, parameters, options));
+        value.forEach((item, index) => {
+            if (typeof item === 'string') {
+                const v = replacement(item, parameters);
+                if (v !== item) value[index] = v;
+            } else {
+                injectMutate(item, parameters, replacement);
+            }
+        });
+        return value;
+
+    } else if (value && valueType === 'object') {
+        const keys = Object.keys(value);
+        const length = keys.length;
+        for (let i = 0; i < length; i++) {
+            const key = keys[i];
+            const item = value[key];
+            if (typeof item === 'string') {
+                const v = replacement(item, parameters);
+                if (v !== item) value[key] = v;
+            } else {
+                injectMutate(item, parameters, replacement);
+            }
+        }
+        return value;
+
+    } else if (valueType === 'string') {
+        return replacement(value, parameters);
+
+    } else {
+        return value;
+    }
+}
+
+function injectCopy(value, parameters, replacement) {
+    const valueType = typeof value;
+
+    if (Array.isArray(value)) {
+        return value.map(item => injectCopy(item, parameters, replacement));
 
     } else if (value && valueType === 'object') {
         const result = {};
@@ -63,12 +106,12 @@ function inject(value, parameters, options) {
         const length = keys.length;
         for (let i = 0; i < length; i++) {
             const key = keys[i];
-            result[key] = inject(value[key], parameters, options);
+            result[key] = injectCopy(value[key], parameters, replacement);
         }
         return result;
 
     } else if (valueType === 'string') {
-        return options.replacement(value, parameters);
+        return replacement(value, parameters);
 
     } else {
         return value;
