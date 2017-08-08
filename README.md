@@ -99,6 +99,7 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
     - [Enforcer.prototype.errors](#enforcerprototypeerrors) - Run a full validation of an value and get back an array of Error objects.
     - [Enforcer.prototype.validate](#enforcerprototypevalidate) - Run a full validation of an value.
 - [Enforcer.injectParameters](#enforcerinjectparameters) - Replace string parameters.
+    - [defaults](#enforcerinjectparametersdefaults) - Set injectParameter defaults
 - [Enforcer.is](#enforcerisbinary) - Type checking.
     - [binary](#enforceris)
     - [boolean](#enforcerisboolean)
@@ -286,6 +287,17 @@ console.log(x.foo);         // 'Bob is 25 years old today'
 ```
 
 [Back to API Table of Contents](#api)
+
+### Enforcer.injectParameters.defaults
+
+An object that has the defaults to use for the parameterInjection. The defaults can be overwritten for this object and those changes may affect any future calls to [Enforcer.injectParameters](#enforcerinjectparameters).
+
+```js
+Enforcer.injectParameters.defaults = {
+    mutate: false,
+    replacement: 'handlebar'
+};
+```
 
 ### Enforcer.is
 
