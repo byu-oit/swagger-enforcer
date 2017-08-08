@@ -107,7 +107,7 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
     - [dateTime](#enforcerisdatetime)
     - [integer](#enforcerisinteger)
     - [number](#enforcerisnumber)
-- [Enforcer.release](#enforcerrelease') - Create an unenforced copy of an enforced object.
+- [Enforcer.release](#enforcerrelease) - Create an unenforced copy of an enforced object.
 - [Enforcer.same](#enforcersame) - Check if two values are equivalent.
 - [Enforcer.to](#enforcerto) - Type conversion.
     - [binary](#enforcertobinary)
@@ -261,7 +261,11 @@ A static method that will find and replace string parameters with new values.
  
 * *options* - Configuration options:
 
+    * *mutate* - Set to `true` to mutate the passed in object, otherwise generate a copy. Defaults to `false`.
+
     * *replacement* - The replacement method to use. This can be one of `colon`, `doubleHandlebar`, `handlebar`, or a custom `Function`. Defaults to `handlebar`.
+    
+**Returns** the value after parameter injection.
     
 **Example**
 
