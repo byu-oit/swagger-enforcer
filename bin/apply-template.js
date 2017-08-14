@@ -15,6 +15,7 @@
  *    limitations under the License.
  **/
 'use strict';
+const convertTo         = require('./convert-to');
 const copy              = require('./copy');
 const getSchemaType     = require('./schema-type');
 const injectParameters  = require('./inject-parameters');
@@ -32,9 +33,14 @@ module.exports = function (schema, definitions, params, options, initialValue) {
     if (!definitions) definitions = {};
     if (!options) options = {};
     options = Object.assign(module.exports.defaults, options);
-    options.injector = typeof options.replacement === 'function'
+    const injector = typeof options.replacement === 'function'
         ? options.replacement
         : injectParameters.injectors[options.replacement];
+    options.injector = function(type, template) {
+        let result = injector(template, params);
+        if (type !== 'string' && convertTo.hasOwnProperty(type)) result = convertTo[type](result);
+        return result;
+    };
 
     if (options.useDefaults || options.useTemplates) {
         return arguments.length < 5
@@ -49,7 +55,7 @@ module.exports.defaults = {
     defaultsUseParams: true,
     useDefaults: true,
     useTemplates: true,
-    replacement: injectParameters.defaults.replacement
+    replacement: 'handlebar'
 };
 
 /**
@@ -103,11 +109,11 @@ function applyTemplate(schema, definitions, params, options, value) {
 
     // if the value has a template and should use it then attempt to get its value
     if (valueNotProvided && options.useTemplates && schema.hasOwnProperty('x-template')) {
-        const value = options.injector(schema['x-template'], params);
+        let value = options.injector(schema.type, schema['x-template']);
         if (value !== schema['x-template']) {
             return {
                 applied: true,
-                value: schema['x-template']
+                value: value
             };
         }
     }
@@ -122,7 +128,7 @@ function applyTemplate(schema, definitions, params, options, value) {
             } else if (type === 'string') {
                 return {
                     applied: true,
-                    value: options.injector(schema.default, params)
+                    value: options.injector(schema.type, schema.default)
                 };
             }
 
