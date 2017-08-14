@@ -98,6 +98,8 @@ enforcer.validate(schema, obj);  // throws an error because 'abc' is not in enum
     - [Enforcer.prototype.enforce](#enforcerprototypeenforce) - Create an object with enforcement.
     - [Enforcer.prototype.errors](#enforcerprototypeerrors) - Run a full validation of an value and get back an array of Error objects.
     - [Enforcer.prototype.validate](#enforcerprototypevalidate) - Run a full validation of an value.
+- [Enforcer.applyTemplate](#enforcerapplytemplate) - Create an unenforced object with templates and defaults applied.
+    - [defaults](#enforcerapplytemplatedefaults)
 - [Enforcer.injectParameters](#enforcerinjectparameters) - Replace string parameters.
     - [defaults](#enforcerinjectparametersdefaults) - Set injectParameter defaults
 - [Enforcer.is](#enforcerisbinary) - Type checking.
@@ -245,6 +247,92 @@ Validate a value as if it were fully built. If validation fails then an error wi
 **Returns** - Undefined. If validation fails then an error will be thrown.
 
 **Example** - [See Example 2](#example-2)
+
+[Back to API Table of Contents](#api)
+
+### Enforcer.applyTemplate
+
+Build an unenforced object from a schema's `x-template` definitions, applying parameters to the templates to to generate valid values.
+
+**Signature:** `Enforcer.applyTemplate ( schema, definitions, params [, options, [, initialValue ] ] ) : object`
+
+**Parameters:**
+
+* *schema* - The schema to build objects from.
+
+* *definitions* - The swagger definitions object. This is necessary if using discriminators, otherwise it can safely be set to an empty object `{}` or `null`.
+
+* *params* - An object defining key value pairs for parameter enforcement.
+
+* *options* - The options to use while building the object:
+
+    - *defaultsUseParams* - If applying `useDefaults` is set to true and this property is set to true then parameter replacement will also be set for defaults.
+    
+    - *replacement* - Set the parameter replacement style to one of `colon`, `doubleHandlebar`, `handlebar`, or a custom `Function`. Defaults to the [injectParameters defaults](#enforcerinjectparametersdefaults) replacement that by default is `handlebar`.
+
+    - *useDefaults* - Set to true to use `default` property in addition to `x-template` property to generate templates. Defaults to `true`.
+    
+    - *useTemplates* - Set to `true` to use the `x-template` property to produce replacements
+
+* *initialValue* - An optional value to start building the object from. If provided it must match the schema's type.
+ 
+**Returns** - An unenforced object with the template applied.
+    
+**Example**
+
+```js
+const schema = {
+    type: 'object',
+    properties: {
+        firstName: {
+            type: 'string',
+            'x-template': '{firstName}'
+        },
+        fullName: {
+            type: 'string',
+            'x-template': '{firstName} {lastName}'
+        },
+        lastName: {
+            type: 'string',
+            'x-template': '{lastName}'
+        },
+        roles: {
+            type: 'array',
+            items: {
+                type: 'string'
+            },
+            default: []
+        }
+    }
+};
+
+const params = {
+    firstName: 'Bob',
+    lastName: 'Smith'
+};
+
+const x = Enforcer.applyTemplate(schema, null, params);
+
+console.log(x);         //  {
+                        //      firstName: 'Bob',
+                        //      fullName: 'Bob Smith',
+                        //      lastName: 'Smith',
+                        //      roles: []
+                        //  }
+```
+
+[Back to API Table of Contents](#api)
+
+### Enforcer.injectParameters.defaults
+
+An object that has the defaults to use for the parameterInjection. The defaults can be overwritten for this object and those changes may affect any future calls to [Enforcer.injectParameters](#enforcerinjectparameters).
+
+```js
+Enforcer.injectParameters.defaults = {
+    mutate: false,
+    replacement: 'handlebar'
+};
+```
 
 [Back to API Table of Contents](#api)
 
