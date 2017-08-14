@@ -28,6 +28,7 @@ const injectorPatterns = {
     doubleHandlebar: injectorReplacement(function() { return /{{([_$a-z][_$a-z0-9]*)}}/ig }),
     handlebar: injectorReplacement(function() { return /{([_$a-z][_$a-z0-9]*)}/ig })
 };
+injectParameters.injectors = injectorPatterns;
 
 /**
  * Look for property values that are strings and perform variable value substitution. If a
