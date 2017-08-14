@@ -38,7 +38,7 @@ module.exports = function (schema, definitions, params, options, initialValue) {
         : injectParameters.injectors[options.replacement];
     options.injector = function(type, template) {
         let result = injector(template, params);
-        if (type !== 'string' && convertTo.hasOwnProperty(type)) result = convertTo[type](result);
+        if (result !== template && type !== 'string' && convertTo.hasOwnProperty(type)) result = convertTo[type](result);
         return result;
     };
 
@@ -129,6 +129,11 @@ function applyTemplate(schema, definitions, params, options, value) {
                 return {
                     applied: true,
                     value: options.injector(schema.type, schema.default)
+                };
+            } else {
+                return {
+                    applied: true,
+                    value: copy(schema.default)
                 };
             }
 
