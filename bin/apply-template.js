@@ -19,7 +19,18 @@ const copy              = require('./copy');
 const getSchemaType     = require('./schema-type');
 const injectParameters  = require('./inject-parameters');
 
+/**
+ * Apply template and values.
+ * @param {Object} schema
+ * @param {Object} definitions
+ * @param {Object} params
+ * @param {Object} [options]
+ * @param {*} [initialValue]
+ * @returns {*}
+ */
 module.exports = function (schema, definitions, params, options, initialValue) {
+    if (!definitions) definitions = {};
+    if (!options) options = {};
     options = Object.assign(module.exports.defaults, options);
     options.injector = typeof options.replacement === 'function'
         ? options.replacement
