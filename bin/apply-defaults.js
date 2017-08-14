@@ -61,9 +61,6 @@ function applyDefaults(schema, definitions, options, value) {
                 value: Object.assign.apply(Object, applications)
             };
 
-        } else if (schema.discriminator && definitions.hasOwnProperty(schema.discriminator)) {
-
-
         } else if (valueNotProvided && schema.hasOwnProperty('default')) {
             return {
                 applied: true,
