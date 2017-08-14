@@ -268,7 +268,7 @@ Build an unenforced object from a schema's `x-template` definitions, applying pa
 
     - *defaultsUseParams* - If applying `useDefaults` is set to true and this property is set to true then parameter replacement will also be set for defaults.
     
-    - *replacement* - Set the parameter replacement style to one of `colon`, `doubleHandlebar`, `handlebar`, or a custom `Function`. Defaults to the [injectParameters defaults](#enforcerinjectparametersdefaults) replacement that by default is `handlebar`.
+    - *replacement* - Set the parameter replacement style to one of `colon`, `doubleHandlebar`, `handlebar`, or a custom `Function`. Defaults to `handlebar`.
 
     - *useDefaults* - Set to true to use `default` property in addition to `x-template` property to generate templates. Defaults to `true`.
     
@@ -323,13 +323,15 @@ console.log(x);         //  {
 
 [Back to API Table of Contents](#api)
 
-### Enforcer.injectParameters.defaults
+### Enforcer.applyTemplate.defaults
 
-An object that has the defaults to use for the parameterInjection. The defaults can be overwritten for this object and those changes may affect any future calls to [Enforcer.injectParameters](#enforcerinjectparameters).
+An object that has the defaults to use for the applyTemplate. The defaults can be overwritten for this object and those changes may affect any future calls to [Enforcer.applyTemplate](#enforcerapplytemplate).
 
 ```js
-Enforcer.injectParameters.defaults = {
-    mutate: false,
+Enforcer.applyTemplate.defaults = {
+    defaultsUseParams: true,
+    useDefaults: true,
+    useTemplates: true,
     replacement: 'handlebar'
 };
 ```
