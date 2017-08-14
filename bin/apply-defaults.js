@@ -18,16 +18,53 @@
 const copy          = require('./copy');
 const getSchemaType = require('./schema-type');
 
-module.exports = function(schema, options, value) {
+module.exports = function(schema, definitions, options, value) {
     return applyDefaults.apply(null, arguments).value;
 };
 
-function applyDefaults(schema, options, value) {
+function applyDefaults(schema, definitions, options, value) {
     if (options.useDefaults) {
-        const type = getSchemaType(schema);
-        const valueNotProvided = arguments.length < 3;
+        const valueNotProvided = arguments.length < 4;
 
-        if (valueNotProvided && schema.hasOwnProperty('default')) {
+        if (schema.discriminator && value.hasOwnProperty(schema.discriminator)) {
+            const second = definitions[value[schema.discriminator]];
+            const schemaHasAllOf = Array.isArray(schema.allOf);
+            schema = copy(schema);
+
+            const allOf = (Array.isArray(second.allOf) ? second.allOf : [ second ])
+                .filter(s => s !== schema);
+            (schemaHasAllOf ? schema.allOf : [ schema ]).forEach(s => {
+                if (!allOf.includes(s)) allOf.push(s);
+            });
+
+            if (schemaHasAllOf) {
+                schema.allOf = allOf;
+            } else {
+                schema = {
+                    type: 'object',
+                    allOf: allOf
+                };
+            }
+        }
+
+        const type = getSchemaType(schema);
+
+        if (Array.isArray(schema.allOf)) {
+            const applications = [{}];
+            schema.allOf.forEach(schema => {
+                const data = applyDefaults(schema, definitions, options, {});
+                if (data.applied) applications.push(data.value);
+            });
+            applications.push(valueNotProvided ? {} : value);
+            return {
+                applied: applications.length > 2,
+                value: Object.assign.apply(Object, applications)
+            };
+
+        } else if (schema.discriminator && definitions.hasOwnProperty(schema.discriminator)) {
+
+
+        } else if (valueNotProvided && schema.hasOwnProperty('default')) {
             return {
                 applied: true,
                 value: copy(schema.default)
@@ -40,7 +77,7 @@ function applyDefaults(schema, options, value) {
             };
             let setDefault = false;
             const result = value.map(item => {
-                const data = applyDefaults(schema.items, options, item);
+                const data = applyDefaults(schema.items, definitions, options, item);
                 if (data.applied) setDefault = true;
                 return data.value;
             });
@@ -68,7 +105,9 @@ function applyDefaults(schema, options, value) {
                     const subSchema = schema.properties[property];
                     if (subSchema.required) requires.push(property);
                     if (subSchema.hasOwnProperty('default') || subSchema.type === 'object') {
-                        const data = result.hasOwnProperty(property) ? applyDefaults(subSchema, options, result[property]) : applyDefaults(subSchema, options);
+                        const data = result.hasOwnProperty(property)
+                            ? applyDefaults(subSchema, definitions, options, result[property])
+                            : applyDefaults(subSchema, definitions, options);
                         if (data.applied) {
                             result[property] = data.value;
                             setDefault = true;
@@ -81,7 +120,7 @@ function applyDefaults(schema, options, value) {
                 Object.keys(result)
                     .forEach(property => {
                         if (!properties.hasOwnProperty(property)) {
-                            const data = applyDefaults(schema.additionalProperties, options, result[property]);
+                            const data = applyDefaults(schema.additionalProperties, definitions, options, result[property]);
                             if (data.applied) {
                                 result[property] = data.value;
                                 setDefault = true;

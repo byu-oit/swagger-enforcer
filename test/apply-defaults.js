@@ -25,7 +25,7 @@ describe('apply defaults', () => {
 
     it('string', () => {
         const schema = { default: 'abc' };
-        const v = applyDefaults(schema, options);
+        const v = applyDefaults(schema, {}, options);
         expect(v).to.equal('abc');
     });
 
@@ -42,7 +42,7 @@ describe('apply defaults', () => {
                 foo: 'bar'
             }
         };
-        const o = applyDefaults(schema, options);
+        const o = applyDefaults(schema, {}, options);
         expect(o.foo).to.equal('bar');
     });
 
@@ -56,7 +56,7 @@ describe('apply defaults', () => {
                 }
             }
         };
-        const o = applyDefaults(schema, options);
+        const o = applyDefaults(schema, {}, options);
         expect(o.foo).to.equal('bar');
     });
 
@@ -65,7 +65,7 @@ describe('apply defaults', () => {
             type: 'object',
             default: {}
         };
-        const o = applyDefaults(schema, options, null);
+        const o = applyDefaults(schema, {}, options, null);
         expect(o).to.be.null;
     });
 
@@ -82,7 +82,7 @@ describe('apply defaults', () => {
                 }
             }
         };
-        const o = applyDefaults(schema, options, { foo: { num: 1 }, bar: {} });
+        const o = applyDefaults(schema, {}, options, { foo: { num: 1 }, bar: {} });
         expect(o).to.deep.equal({ foo: { num: 1 }, bar: { num: 0 } });
     });
 
@@ -95,7 +95,7 @@ describe('apply defaults', () => {
             },
             required: ['foo']
         };
-        const o = applyDefaults(schema, options, { foo: 'abc' });
+        const o = applyDefaults(schema, {}, options, { foo: 'abc' });
         expect(o).to.deep.equal({ foo: 'abc', bar: 'bar' });
     });
 
@@ -107,7 +107,7 @@ describe('apply defaults', () => {
             },
             default: [1, 2, 3]
         };
-        const ar = applyDefaults(schema, options);
+        const ar = applyDefaults(schema, {}, options);
         expect(ar).to.deep.equal([1,2,3]);
     });
 
@@ -123,19 +123,19 @@ describe('apply defaults', () => {
                 }
             }
         };
-        const ar = applyDefaults(schema, options, [{}, { b: 2 }]);
+        const ar = applyDefaults(schema, {}, options, [{}, { b: 2 }]);
         expect(ar).to.deep.equal([{ a: 1 }, { a: 1, b: 2 }]);
     });
 
     it('array without item schema', () => {
         const schema = { type: 'array' };
-        const ar = applyDefaults(schema, options, [{}, 'a']);
+        const ar = applyDefaults(schema, {}, options, [{}, 'a']);
         expect(ar).to.deep.equal([{}, 'a']);
     });
 
     it('array item schema without defaults', () => {
         const schema = { type: 'array', items: {} };
-        const ar = applyDefaults(schema, options, [{}, 'a']);
+        const ar = applyDefaults(schema, {}, options, [{}, 'a']);
         expect(ar).to.deep.equal([{}, 'a']);
     });
 
@@ -152,7 +152,7 @@ describe('apply defaults', () => {
                 }
             }
         };
-        const o = applyDefaults(schema, options);
+        const o = applyDefaults(schema, {}, options);
         expect(o).to.deep.equal({ age: 0 });
     });
 
@@ -169,7 +169,7 @@ describe('apply defaults', () => {
                 }
             }
         };
-        const o = applyDefaults(schema, options, { name: 'Bob' });
+        const o = applyDefaults(schema, {}, options, { name: 'Bob' });
         expect(o).to.deep.equal({ name: 'Bob', age: 0 });
     });
 
@@ -187,7 +187,7 @@ describe('apply defaults', () => {
                 }
             }
         };
-        const o = applyDefaults(schema, options, { name: 'Bob' });
+        const o = applyDefaults(schema, {}, options, { name: 'Bob' });
         expect(o).to.deep.equal({ name: 'Bob', age: 0 });
     });
 
@@ -205,7 +205,7 @@ describe('apply defaults', () => {
                 }
             }
         };
-        const o = applyDefaults(schema, options, {});
+        const o = applyDefaults(schema, {}, options, {});
         expect(o).to.deep.equal({});
     });
 
@@ -221,13 +221,13 @@ describe('apply defaults', () => {
                 }
             }
         };
-        const o = applyDefaults(schema, options);
+        const o = applyDefaults(schema, {}, options);
         expect(o).to.deep.equal({ obj1: { a: 1 }});
     });
 
     it('object is a copy', () => {
         const schema = { default: {} };
-        const o = applyDefaults(schema, options);
+        const o = applyDefaults(schema, {}, options);
         expect(o).not.to.equal(schema.default);
     });
 
@@ -316,13 +316,115 @@ describe('apply defaults', () => {
 
         it('can add partial object', () => {
             const input = { name: 'Bob' };
-            const o = applyDefaults(schema, options, input);
+            const o = applyDefaults(schema, {}, options, input);
             expect(o.name).to.equal('Bob');
             expect(o.age).to.equal(0);
             expect(o.list1).to.deep.equal([]);
             expect(o).to.not.haveOwnProperty('list2');
         });
 
+    });
+
+    it('allOf', () => {
+        const schema = {
+            type: 'object',
+            allOf: [
+                {
+                    type: 'object',
+                    properties: {
+                        a: {
+                            type: 'string',
+                            default: 'a'
+                        },
+                        b: {
+                            type: 'number',
+                            default: 0
+                        }
+                    }
+                },
+                {
+                    type: 'object',
+                    properties: {
+                        c: {
+                            type: 'string',
+                            default: 'c'
+                        },
+                        b: {
+                            type: 'number',
+                            default: 'b'
+                        }
+                    }
+                },
+            ]
+        };
+        const o = applyDefaults(schema, {}, options);
+        expect(o).to.deep.equal({ a: 'a', b: 'b', c: 'c' });
+    });
+
+    describe('discriminator', () => {
+        const definitions = {
+            Pet: {
+                type: 'object',
+                discriminator: 'petType',
+                properties: {
+                    hasFur: {
+                        type: 'boolean',
+                        default: true
+                    },
+                    petType: {
+                        type: 'string',
+                        enum: ['Cat', 'Dog']
+                    }
+                },
+                required: ['petType']
+            }
+        };
+
+        definitions.Cat = {
+            allOf: [
+                definitions.Pet,
+                {
+                    type: 'object',
+                    properties: {
+                        yarnBalls: {
+                            type: 'number',
+                            default: 3
+                        }
+                    }
+                }
+            ]
+        };
+
+        definitions.Dog = {
+            allOf: [
+                definitions.Pet,
+                {
+                    type: 'object',
+                    properties: {
+                        packSize: {
+                            type: 'number',
+                            default: 1
+                        }
+                    }
+                }
+            ]
+        };
+
+
+        it('cat', () => {
+            const o = applyDefaults(definitions.Cat, definitions, options, {});
+            expect(o).to.deep.equal({ hasFur: true, yarnBalls: 3 });
+        });
+
+        it('pet without type', () => {
+            const o = applyDefaults(definitions.Pet, definitions, options, {});
+            expect(o).to.deep.equal({ hasFur: true });
+        });
+
+        it('pet of type dog', () => {
+            const o = applyDefaults(definitions.Pet, definitions, options, { petType: 'Dog' });
+            expect(o).to.deep.equal({ hasFur: true, packSize: 1, petType: 'Dog' });
+        });
     });
 
 });

@@ -20,7 +20,6 @@ const canProxy          = require('./can-proxy');
 const copy              = require('./copy');
 const getSchemaType     = require('./schema-type');
 const rx                = require('./rx');
-const same              = require('./same');
 const schemas           = require('./schemas');
 const to                = require('./convert-to');
 const Validator         = require('./validator');
@@ -97,9 +96,9 @@ Enforcer.prototype.enforce = function (initial) {
         if (options.useDefaults && schema.hasOwnProperty('default')) {
             initial = copy(schema.default);
         } else if (type === 'array') {
-            initial = applyDefaults(schema, options, []);
+            initial = applyDefaults(schema, this.definitions, options, []);
         } else if (type === 'object') {
-            initial = applyDefaults(schema, options, {});
+            initial = applyDefaults(schema, this.definitions, options, {});
         }
     }
     initial = autoFormat(schema, options, initial);
@@ -108,7 +107,7 @@ Enforcer.prototype.enforce = function (initial) {
     validator.validate(schema, '', initial);
 
     // return proxy
-    return getProxy(validator, schema, options, initial);
+    return getProxy(validator, schema, this.definitions, options, initial);
 };
 
 Enforcer.prototype.errors = function (value) {
@@ -125,11 +124,12 @@ Enforcer.prototype.validate = function (value) {
  * Create an array with schema enforcement.
  * @param {Validator} validator
  * @param {Object} schema The schema definition.
+ * @param {Object} definitions The definitions object.
  * @param {Object} options The options configuration.
  * @param {Array} initial The array to initialize from.
  * @returns {Array}
  */
-function arrayProxy(validator, schema, options, initial) {
+function arrayProxy(validator, schema, definitions, options, initial) {
 
     const proxy = new Proxy(initial, {
         get: function(target, property) {
@@ -138,12 +138,12 @@ function arrayProxy(validator, schema, options, initial) {
                 case '__swaggerResponseProxyTarget__': return target;
 
                 case 'concat': return function(value) {
-                    applyMultipleValueInitializations(schema.items, options, arguments);
+                    applyMultipleValueInitializations(schema.items, definitions, options, arguments);
                     const ar = target.concat.apply(target, arguments);
                     validator.arrayItems(schema, '', ar, arguments);
                     validator.arrayLength(schema, '', ar.length);
-                    arraySetProxies(validator, schema, options, ar);
-                    return arrayProxy(validator, schema, options, ar);
+                    arraySetProxies(validator, schema, definitions, options, ar);
+                    return arrayProxy(validator, schema, definitions, options, ar);
                 };
 
                 case 'copyWithin': return function(index, start, end) {
@@ -155,7 +155,7 @@ function arrayProxy(validator, schema, options, initial) {
                     if (schema.items) {
                         value = autoFormat(schema, options, value);
                         validator.arrayItem(schema, '', target, value);
-                        arguments[0] = getProxy(validator, schema.items, options, value);
+                        arguments[0] = getProxy(validator, schema.items, definitions, options, value);
                     }
                     target.fill.apply(target, arguments);
                     return proxy;
@@ -164,14 +164,14 @@ function arrayProxy(validator, schema, options, initial) {
                 case 'filter': return function(callback, thisArg) {
                     const ar = target.filter.apply(target, arguments);
                     validator.validate(schema, '', ar);
-                    return arrayProxy(validator, schema, options, ar);
+                    return arrayProxy(validator, schema, definitions, options, ar);
                 };
 
                 case 'map': return function(callback, thisArg) {
                     const ar = target.map.apply(target, arguments);
-                    applyMultipleValueInitializations(schema.items, options, ar);
+                    applyMultipleValueInitializations(schema.items, definitions, options, ar);
                     validator.validate(schema, '', ar);
-                    return arrayProxy(validator, schema, options, ar);
+                    return arrayProxy(validator, schema, definitions, options, ar);
                 };
 
                 case 'pop': return function() {
@@ -180,10 +180,10 @@ function arrayProxy(validator, schema, options, initial) {
                 };
 
                 case 'push': return function(value) {
-                    applyMultipleValueInitializations(schema.items, options, arguments);
+                    applyMultipleValueInitializations(schema.items, definitions, options, arguments);
                     validator.arrayItems(schema, '', target, arguments);
                     validator.arrayLength(schema, '', target.length + arguments.length);
-                    arraySetProxies(validator, schema, options, arguments);
+                    arraySetProxies(validator, schema, definitions, options, arguments);
                     return target.push.apply(target, arguments);
                 };
 
@@ -194,26 +194,26 @@ function arrayProxy(validator, schema, options, initial) {
 
                 case 'slice': return function(begin, end) {
                     const ar = target.slice.apply(target, arguments);
-                    applyMultipleValueInitializations(schema.items, options, ar);
+                    applyMultipleValueInitializations(schema.items, definitions, options, ar);
                     validator.validate(schema, '', ar);
-                    return arrayProxy(validator, schema, options, ar);
+                    return arrayProxy(validator, schema, definitions, options, ar);
                 };
 
                 case 'splice': return function(start, deleteCount, item) {
                     const args = someArguments(arguments, 2);
-                    applyMultipleValueInitializations(schema.items, options, args);
+                    applyMultipleValueInitializations(schema.items, definitions, options, args);
                     validator.arrayItems(schema, '', target, args);
                     validator.arrayLength(schema, '', target.length + args.length - (deleteCount || 0));
-                    arraySetProxies(validator, schema, options, args);
+                    arraySetProxies(validator, schema, definitions, options, args);
                     const ar = target.splice.apply(target, arguments);
-                    return arrayProxy(validator, schema, options, ar);
+                    return arrayProxy(validator, schema, definitions, options, ar);
                 };
 
                 case 'unshift': return function() {
-                    applyMultipleValueInitializations(schema.items, options, arguments);
+                    applyMultipleValueInitializations(schema.items, definitions, options, arguments);
                     validator.arrayItems(schema, '', target, arguments);
                     validator.arrayLength(schema, '', target.length + arguments.length);
-                    arraySetProxies(validator, schema, options, arguments);
+                    arraySetProxies(validator, schema, definitions, options, arguments);
                     return target.unshift.apply(target, arguments);
                 };
 
@@ -226,7 +226,7 @@ function arrayProxy(validator, schema, options, initial) {
                 if (index > target.length) validator.arrayLength(schema, '', index + 1);
                 value = autoFormat(schema, options, value);
                 validator.arrayItem(schema, property, target, value);
-                target[property] = schema.items ? getProxy(validator, schema.items, options, value) : value;
+                target[property] = schema.items ? getProxy(validator, schema.items, definitions, options, value) : value;
             } else {
                 target[property] = value;
             }
@@ -241,11 +241,12 @@ function arrayProxy(validator, schema, options, initial) {
  * Create an object with schema enforcement.
  * @param {Validator} validator
  * @param {object} schema The schema definition.
+ * @param {object} definitions The definitions object.
  * @param {object} options The options configuration.
  * @param {object} initial The initial value.
  * @returns {object}
  */
-function objectProxy(validator, schema, options, initial) {
+function objectProxy(validator, schema, definitions, options, initial) {
     return new Proxy(initial, {
         deleteProperty: function(target, property) {
             const schemas = validator.objectSchemas(schema, '', target);
@@ -266,7 +267,7 @@ function objectProxy(validator, schema, options, initial) {
                 ? schema.properties[property]
                 : schema.additionalProperties;
 
-            value = applyDefaults(subSchema, options, value);
+            value = applyDefaults(subSchema, definitions, options, value);
             value = autoFormat(subSchema, options, value);
             validator.serializable('', value);
 
@@ -274,7 +275,7 @@ function objectProxy(validator, schema, options, initial) {
             validator.objectPropertyLength(schemas, '', target, property, true);
             validator.objectProperty(schemas, '', value, property);
 
-            target[property] = subSchema ? getProxy(validator, subSchema, options, value) : value;
+            target[property] = subSchema ? getProxy(validator, subSchema, definitions, options, value) : value;
 
             validator.objectHasRequiredProperties(schemas, '', target);
             return true;
@@ -284,12 +285,12 @@ function objectProxy(validator, schema, options, initial) {
 
 
 
-function arraySetProxies(validator, schema, options, values) {
+function arraySetProxies(validator, schema, definitions, options, values) {
     if (schema.items) {
         const length = values.length;
         for (let i = 0; i < length; i++) {
             const value = autoFormat(schema, options, values[i]);
-            values[i] = getProxy(validator, schema.items, options, value);
+            values[i] = getProxy(validator, schema.items, definitions, options, value);
         }
     }
 }
@@ -297,14 +298,15 @@ function arraySetProxies(validator, schema, options, values) {
 /**
  * Apply defaults to and auto format all values in an array-like object.
  * @param {Object} schema
+ * @param {Object} definitions
  * @param {Object} options
  * @param {Object} values
  */
-function applyMultipleValueInitializations(schema, options, values) {
+function applyMultipleValueInitializations(schema, definitions, options, values) {
     if (schema) {
         const length = values.length;
         for (let i = 0; i < length; i++) {
-            values[i] = autoFormat(schema, options, applyDefaults(schema, options, values[i]));
+            values[i] = autoFormat(schema, options, applyDefaults(schema, definitions, options, values[i]));
         }
     }
 }
@@ -338,29 +340,30 @@ function autoFormat(schema, options, value) {
  * Get a deep proxy for a value.
  * @param {Validator} validator
  * @param {Object} schema
+ * @param {Object} definitions
  * @param {Object} options
  * @param {*} value
  * @returns {*}
  */
-function getProxy(validator, schema, options, value) {
+function getProxy(validator, schema, definitions, options, value) {
     const type = getSchemaType(schema);
     if (type === 'array') {
         if (schema.items) {
             const length = value.length;
             for (let i = 0; i < length; i++) {
-                value[i] = getProxy(validator, schema.items, options, autoFormat(schema, options, value[i]));
+                value[i] = getProxy(validator, schema.items, definitions, options, autoFormat(schema, options, value[i]));
             }
         }
-        return arrayProxy(validator, schema, options, value);
+        return arrayProxy(validator, schema, definitions, options, value);
 
     } else if (type === 'object') {
         const specifics = schema.properties || {};
         Object.keys(value)
             .forEach(key => {
                 const useSchema = specifics[key] || schema.additionalProperties || null;
-                if (useSchema) value[key] = getProxy(validator, useSchema, options, autoFormat(schema, options, value[key]));
+                if (useSchema) value[key] = getProxy(validator, useSchema, definitions, options, autoFormat(schema, options, value[key]));
             });
-        return objectProxy(validator, schema, options, value);
+        return objectProxy(validator, schema, definitions, options, value);
     }
 
     return value;
