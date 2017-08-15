@@ -20,7 +20,9 @@ const applyTemplate = require('./apply-template');
 module.exports = function(schema, definitions, options, value) {
     options = Object.assign({ defaultsUseParams: false, useTemplates: false }, options);
 
-    const args = [schema, definitions, {}, options];
-    if (arguments.length > 3) args.push(value);
-    return applyTemplate.apply(null, args);
+    if (arguments.length > 3) {
+        return applyTemplate(schema, definitions, {}, options, value);
+    } else {
+        return applyTemplate(schema, definitions, {}, options);
+    }
 };

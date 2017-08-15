@@ -20,6 +20,13 @@ const copy              = require('./copy');
 const getSchemaType     = require('./schema-type');
 const injectParameters  = require('./inject-parameters');
 
+const defaults = {
+    defaultsUseParams: true,
+    useDefaults: true,
+    useTemplates: true,
+    replacement: 'handlebar'
+};
+
 /**
  * Apply template and values.
  * @param {Object} schema
@@ -32,13 +39,31 @@ const injectParameters  = require('./inject-parameters');
 module.exports = function (schema, definitions, params, options, initialValue) {
     if (!definitions) definitions = {};
     if (!options) options = {};
-    options = Object.assign(module.exports.defaults, options);
+    options = Object.assign({}, defaults, options);
     const injector = typeof options.replacement === 'function'
         ? options.replacement
         : injectParameters.injectors[options.replacement];
-    options.injector = function(type, template) {
+    options.injector = function(schema, template) {
         let result = injector(template, params);
-        if (result !== template && type !== 'string' && convertTo.hasOwnProperty(type)) result = convertTo[type](result);
+        if (result !== template) {
+            const type = getSchemaType(schema);
+            switch (type) {
+                case 'integer':
+                case 'number':
+                case 'boolean':
+                    result = convertTo[type](result);
+                    break;
+                case 'string':
+                    switch (schema.format) {
+                        case 'byte':
+                        case 'binary':
+                        case 'date':
+                        case 'date-time':
+                            result = convertTo[schema.format](result);
+                            break;
+                    }
+            }
+        }
         return result;
     };
 
@@ -51,12 +76,18 @@ module.exports = function (schema, definitions, params, options, initialValue) {
     }
 };
 
-module.exports.defaults = {
-    defaultsUseParams: true,
-    useDefaults: true,
-    useTemplates: true,
-    replacement: 'handlebar'
-};
+
+Object.defineProperty(module.exports, 'defaults', {
+    get: () => Object.assign({}, defaults),
+    set: v => {
+        Object.assign(defaults, {
+            defaultsUseParams: true,
+            useDefaults: true,
+            useTemplates: true,
+            replacement: 'handlebar'
+        }, v);
+    }
+});
 
 /**
  *
@@ -109,7 +140,7 @@ function applyTemplate(schema, definitions, params, options, value) {
 
     // if the value has a template and should use it then attempt to get its value
     if (valueNotProvided && options.useTemplates && schema.hasOwnProperty('x-template')) {
-        let value = options.injector(schema.type, schema['x-template']);
+        let value = options.injector(schema, schema['x-template']);
         if (value !== schema['x-template']) {
             return {
                 applied: true,
@@ -128,7 +159,7 @@ function applyTemplate(schema, definitions, params, options, value) {
             } else if (type === 'string') {
                 return {
                     applied: true,
-                    value: options.injector(schema.type, schema.default)
+                    value: options.injector(schema, schema.default)
                 };
             } else {
                 return {
