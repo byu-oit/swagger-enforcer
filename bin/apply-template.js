@@ -20,12 +20,7 @@ const copy              = require('./copy');
 const getSchemaType     = require('./schema-type');
 const injectParameters  = require('./inject-parameters');
 
-const defaults = {
-    defaultsUseParams: true,
-    useDefaults: true,
-    useTemplates: true,
-    replacement: 'handlebar'
-};
+const defaults = {};
 
 /**
  * Apply template and values.
@@ -44,27 +39,7 @@ module.exports = function (schema, definitions, params, options, initialValue) {
         ? options.replacement
         : injectParameters.injectors[options.replacement];
     options.injector = function(schema, template) {
-        let result = injector(template, params);
-        if (result !== template) {
-            const type = getSchemaType(schema);
-            switch (type) {
-                case 'integer':
-                case 'number':
-                case 'boolean':
-                    result = convertTo[type](result);
-                    break;
-                case 'string':
-                    switch (schema.format) {
-                        case 'byte':
-                        case 'binary':
-                        case 'date':
-                        case 'date-time':
-                            result = convertTo[schema.format](result);
-                            break;
-                    }
-            }
-        }
-        return result;
+        return injector(template, params);
     };
 
     if (options.useDefaults || options.useTemplates) {
@@ -81,13 +56,16 @@ Object.defineProperty(module.exports, 'defaults', {
     get: () => Object.assign({}, defaults),
     set: v => {
         Object.assign(defaults, {
+            autoFormat: true,
             defaultsUseParams: true,
             useDefaults: true,
             useTemplates: true,
+            useVariables: true,
             replacement: 'handlebar'
         }, v);
     }
 });
+module.exports.defaults = {};
 
 /**
  *
@@ -135,6 +113,34 @@ function applyTemplate(schema, definitions, params, options, value) {
         return {
             applied: applications.length > 2,
             value: Object.assign.apply(Object, applications)
+        };
+    }
+
+    if (valueNotProvided && options.useVariables && schema.hasOwnProperty('x-variable') && params.hasOwnProperty(schema['x-variable'])) {
+        let value = copy(params[schema['x-variable']]);
+        if (options.autoFormat) {
+            switch (type) {
+                case 'boolean':
+                case 'integer':
+                case 'number':
+                    value = convertTo[type](value);
+                    break;
+                case 'string':
+                    switch (schema.format) {
+                        case 'binary':
+                        case 'byte':
+                        case 'date':
+                            value = convertTo[schema.format](value);
+                            break;
+                        case 'date-time':
+                            value = convertTo.dateTime(value);
+                            break;
+                    }
+            }
+        }
+        return {
+            applied: true,
+            value: value
         };
     }
 
