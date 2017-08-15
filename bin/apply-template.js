@@ -53,7 +53,7 @@ module.exports = function (schema, definitions, params, options, initialValue) {
 
 
 Object.defineProperty(module.exports, 'defaults', {
-    get: () => Object.assign({}, defaults),
+    get: () => defaults,
     set: v => {
         Object.assign(defaults, {
             autoFormat: true,
