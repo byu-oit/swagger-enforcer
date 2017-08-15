@@ -109,7 +109,7 @@ function applyTemplate(schema, definitions, params, options, value) {
         const allOf = (Array.isArray(second.allOf) ? second.allOf : [ second ])
             .filter(s => s !== schema);
         (schemaHasAllOf ? schema.allOf : [ schema ]).forEach(s => {
-            if (!allOf.includes(s)) allOf.push(s);
+            if (allOf.indexOf(s) !== -1) allOf.push(s);
         });
 
         if (schemaHasAllOf) {
