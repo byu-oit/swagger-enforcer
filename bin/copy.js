@@ -18,8 +18,17 @@
 
 module.exports = copy;
 
+/**
+ * Copied Dates, Buffers, Arrays, plain Objects, and Primitives
+ * @param {*} value
+ * @returns {*}
+ */
 function copy(value) {
-    if (Array.isArray(value)) {
+    if (value instanceof Date) {
+        return new Date(+value);
+    } else if (value instanceof Buffer) {
+        return value.slice(0);
+    } else if (Array.isArray(value)) {
         return value.map(copy);
     } else if (value && typeof value === 'object') {
         const result = {};
