@@ -42,7 +42,8 @@ module.exports = function (schema, definitions, params, options, initialValue) {
         return injector(template, params);
     };
 
-    if (options.useDefaults || options.useTemplates) {
+    console.log("TEMPLATE OPTIONS", options);
+    if (options.useDefaults || options.useTemplates || options.useVariables) {
         return arguments.length < 5
             ? applyTemplate(schema, definitions, params, options).value
             : applyTemplate(schema, definitions, params, options, initialValue).value;
