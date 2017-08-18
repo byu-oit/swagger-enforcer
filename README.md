@@ -266,13 +266,19 @@ Build an unenforced object from a schema's `x-template` definitions, applying pa
 
 * *options* - The options to use while building the object:
 
-    - *defaultsUseParams* - If applying `useDefaults` is set to true and this property is set to true then parameter replacement will also be set for defaults.
+    - *autoFormat* - Any value set using `x-variable` will will automatically by type cast and formatted when possible to match the schema. Defaults to `true`.
+
+    - *defaultsUseParams* - If applying `useDefaults` is set to true and this property is set to true then parameter replacement will also be set for defaults. Defaults to `true`.
+    
+    - *ignoreMissingRequired* - If set to `false` and any requires are missing in the schema then that part of the template will not be stampped. Defaults to `true`
     
     - *replacement* - Set the parameter replacement style to one of `colon`, `doubleHandlebar`, `handlebar`, or a custom `Function`. Defaults to `handlebar`.
 
     - *useDefaults* - Set to true to use `default` property in addition to `x-template` property to generate templates. Defaults to `true`.
     
-    - *useTemplates* - Set to `true` to use the `x-template` property to produce replacements
+    - *useTemplates* - Set to `true` to use the `x-template` property to produce string replacements. Defaults to `true`.
+    
+    - *useVariables* - Set to `true` to use the `x-variable` property to place values. Defaults to `true`.
 
 * *initialValue* - An optional value to start building the object from. If provided it must match the schema's type.
  
@@ -296,6 +302,11 @@ const schema = {
             type: 'string',
             'x-template': '{lastName}'
         },
+        birthday: {
+            type: 'string',
+            format: 'date',
+            'x-variable': 'birthday'
+        },
         roles: {
             type: 'array',
             items: {
@@ -307,6 +318,7 @@ const schema = {
 };
 
 const params = {
+    birthday: new Date(),
     firstName: 'Bob',
     lastName: 'Smith'
 };
@@ -317,6 +329,7 @@ console.log(x);         //  {
                         //      firstName: 'Bob',
                         //      fullName: 'Bob Smith',
                         //      lastName: 'Smith',
+                        //      birthday: '2000-01-01'
                         //      roles: []
                         //  }
 ```
@@ -329,9 +342,11 @@ An object that has the defaults to use for the applyTemplate. The defaults can b
 
 ```js
 Enforcer.applyTemplate.defaults = {
+    autoFormat: true,
     defaultsUseParams: true,
     useDefaults: true,
     useTemplates: true,
+    useVariables: true,
     replacement: 'handlebar'
 };
 ```
