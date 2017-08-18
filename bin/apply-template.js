@@ -32,6 +32,7 @@ const defaults = {};
  * @returns {*}
  */
 module.exports = function (schema, definitions, params, options, initialValue) {
+    if (!schema) schema = {};
     if (!definitions) definitions = {};
     if (!options) options = {};
     options = Object.assign({}, defaults, options);
@@ -42,7 +43,6 @@ module.exports = function (schema, definitions, params, options, initialValue) {
         return injector(template, params);
     };
 
-    console.log("TEMPLATE OPTIONS", options);
     if (options.useDefaults || options.useTemplates || options.useVariables) {
         return arguments.length < 5
             ? applyTemplate(schema, definitions, params, options).value
@@ -59,6 +59,7 @@ Object.defineProperty(module.exports, 'defaults', {
         Object.assign(defaults, {
             autoFormat: true,
             defaultsUseParams: true,
+            ignoreMissingRequired: true,
             useDefaults: true,
             useTemplates: true,
             useVariables: true,
@@ -247,11 +248,13 @@ function applyTemplate(schema, definitions, params, options, value) {
         }
 
         // if missing a required then don't send back defaults (which may have caused the required error)
-        const requiresLength = requires.length;
-        for (let i = 0; i < requiresLength; i++) {
-            if (!result.hasOwnProperty(requires[i])) {
-                setDefault = false;
-                break;
+        if (!options.ignoreMissingRequired) {
+            const requiresLength = requires.length;
+            for (let i = 0; i < requiresLength; i++) {
+                if (!result.hasOwnProperty(requires[i])) {
+                    setDefault = false;
+                    break;
+                }
             }
         }
 
