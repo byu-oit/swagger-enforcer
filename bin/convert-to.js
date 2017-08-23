@@ -132,7 +132,7 @@ exports.integer = function(value) {
             return parseInt(value);
         } else if (type === 'number') {
             return Math.round(value);
-        } else {
+        } else if (type === 'boolean') {
             return value ? 1 : 0;
         }
     }
@@ -153,12 +153,28 @@ exports.number = function(value) {
             return parseFloat(value);
         } else if (type === 'number') {
             return value;
-        } else {
+        } else if (type === 'boolean') {
             return value ? 1 : 0;
         }
     }
 
     throw Error('Cannot convert to number. The value must be numeric. Received: ' + value);
+};
+
+/**
+ * Convert a value to a string.
+ * @param {string, number, boolean} value
+ * @returns {string}
+ */
+exports.string = function(value) {
+    switch (typeof value) {
+        case 'boolean':
+        case 'number':
+        case 'string':
+            return String(value);
+    }
+
+    throw Error('Cannot convert to string. The value must be a string, a number, or a boolean. Received: ' + value);
 };
 
 function decToBin(dec) {
