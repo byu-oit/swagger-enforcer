@@ -222,7 +222,7 @@ function applyTemplate(schema, definitions, params, options, value) {
             .forEach(property => {
                 const subSchema = schema.properties[property];
                 if (subSchema.required) requires.push(property);
-                if ((options.useTemplates && subSchema.hasOwnProperty('x-template')) || (options.useDefaults && subSchema.hasOwnProperty('default')) || subSchema.type === 'object') {
+                if ((options.useTemplates && subSchema.hasOwnProperty('x-template')) || (options.useVariables && subSchema.hasOwnProperty('x-variable')) || (options.useDefaults && subSchema.hasOwnProperty('default')) || subSchema.type === 'object') {
                     const data = result.hasOwnProperty(property)
                         ? applyTemplate(subSchema, definitions, params, options, result[property])
                         : applyTemplate(subSchema, definitions, params, options);
