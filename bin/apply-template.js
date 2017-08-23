@@ -118,7 +118,7 @@ function applyTemplate(schema, definitions, params, options, value) {
         };
     }
 
-    if (valueNotProvided && options.useVariables && schema.hasOwnProperty('x-variable') && params.hasOwnProperty(schema['x-variable'])) {
+    if (valueNotProvided && options.useVariables && schema.hasOwnProperty('x-variable') && params.hasOwnProperty(schema['x-variable']) && typeof params[schema['x-variable']] !== 'undefined') {
         let value = copy(params[schema['x-variable']]);
         if (options.autoFormat) {
             switch (type) {
@@ -137,6 +137,8 @@ function applyTemplate(schema, definitions, params, options, value) {
                         case 'date-time':
                             value = convertTo.dateTime(value);
                             break;
+                        default:
+                            value = convertTo.string(value);
                     }
             }
         }
