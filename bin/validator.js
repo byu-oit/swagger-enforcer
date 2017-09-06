@@ -616,8 +616,8 @@ function validateDateTime(context, at, value) {
     const year = +match[1];
     const month = +match[2] - 1;
     const day = +match[3];
-    const date = new Date(year, month, day);
-    if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) {
+    const date = new Date(value);
+    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month || date.getUTCDate() !== day) {
         context.error(at, 'Date does not exist on the calendar.', 'DATE');
     }
 
