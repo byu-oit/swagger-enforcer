@@ -137,7 +137,14 @@ describe('enforcer', () => {
                             value: {
                                 type: 'object',
                                 properties: {
-                                    value2: {
+                                    complete: {
+                                        type: 'object',
+                                        properties: {
+                                            foo: { type: 'string' },
+                                            bar: { type: 'string', default: 'bar' }
+                                        }
+                                    },
+                                    partial: {
                                         type: 'object',
                                         properties: {
                                             foo: { type: 'string' },
@@ -150,8 +157,7 @@ describe('enforcer', () => {
                         }
                     };
                     const o = enforcer(schema, {}, options).enforce();
-                    o.value.value2.foo = 'abc';
-                    expect(o).to.deep.equal({ value: { value2: { foo: 'abc', bar: 'bar' } } });
+                    expect(o).to.deep.equal({ value: { complete: { bar: 'bar' }}});
                 });
 
             });
