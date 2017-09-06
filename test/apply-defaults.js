@@ -194,10 +194,10 @@ describe('apply defaults', () => {
     it('object missing required property', () => {
         const schema = {
             type: 'object',
+            required: ['name'],
             properties: {
                 name: {
-                    type: 'string',
-                    required: true
+                    type: 'string'
                 },
                 age: {
                     type: 'integer',
@@ -412,13 +412,13 @@ describe('apply defaults', () => {
 
 
         it('cat', () => {
-            const o = applyDefaults(definitions.Cat, definitions, options, {});
-            expect(o).to.deep.equal({ hasFur: true, yarnBalls: 3 });
+            const o = applyDefaults(definitions.Cat, definitions, options, { petType: 'Cat'});
+            expect(o).to.deep.equal({ hasFur: true, petType: 'Cat', yarnBalls: 3 });
         });
 
         it('pet without type', () => {
             const o = applyDefaults(definitions.Pet, definitions, options, {});
-            expect(o).to.deep.equal({ hasFur: true });
+            expect(o).to.deep.equal({});
         });
 
         it('pet of type dog', () => {

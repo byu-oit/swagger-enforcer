@@ -81,25 +81,21 @@ module.exports.defaults = {};
 function applyTemplate(schema, definitions, params, options, value) {
     const valueNotProvided = arguments.length < 5;
 
-    if (schema.discriminator && value.hasOwnProperty(schema.discriminator)) {
+    if (!schema.allOf && schema.discriminator && value.hasOwnProperty(schema.discriminator)) {
         const second = definitions[value[schema.discriminator]];
-        const schemaHasAllOf = Array.isArray(schema.allOf);
-        schema = copy(schema);
+        //schema = copy(schema);
 
         const allOf = (Array.isArray(second.allOf) ? second.allOf : [ second ])
             .filter(s => s !== schema);
-        (schemaHasAllOf ? schema.allOf : [ schema ]).forEach(s => {
-            if (allOf.indexOf(s) !== -1) allOf.push(s);
-        });
 
-        if (schemaHasAllOf) {
-            schema.allOf = allOf;
-        } else {
-            schema = {
-                type: 'object',
-                allOf: allOf
-            };
-        }
+        const schemaCopy = Object.assign({}, schema);
+        delete schemaCopy.discriminator;
+        allOf.push(schemaCopy);
+
+        schema = {
+            type: 'object',
+            allOf: allOf
+        };
     }
 
     const type = getSchemaType(schema);
@@ -108,10 +104,10 @@ function applyTemplate(schema, definitions, params, options, value) {
     if (Array.isArray(schema.allOf)) {
         const applications = [{}];
         schema.allOf.forEach(schema => {
-            const data = applyTemplate(schema, definitions, params, options, {});
+            const data = applyTemplate(schema, definitions, params, options, valueNotProvided ? {} : value);
             if (data.applied) applications.push(data.value);
         });
-        applications.push(valueNotProvided ? {} : value);
+        //applications.push(valueNotProvided ? {} : value);
         return {
             applied: applications.length > 2,
             value: Object.assign.apply(Object, applications)
@@ -217,13 +213,13 @@ function applyTemplate(schema, definitions, params, options, value) {
         // build a new object based on the provided object
         const result = valueNotProvided ? {} : Object.assign({}, value);
         const properties = schema.properties || {};
-        const requires = [];
+        const requires = schema.required || [];
         let setDefault = false;
 
         Object.keys(properties)
             .forEach(property => {
                 const subSchema = schema.properties[property];
-                if (subSchema.required) requires.push(property);
+                //if (subSchema.required) requires.push(property);
                 if ((options.useTemplates && subSchema.hasOwnProperty('x-template')) || (options.useVariables && subSchema.hasOwnProperty('x-variable')) || (options.useDefaults && subSchema.hasOwnProperty('default')) || subSchema.type === 'object') {
                     const data = result.hasOwnProperty(property)
                         ? applyTemplate(subSchema, definitions, params, options, result[property])
