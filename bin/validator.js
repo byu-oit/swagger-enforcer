@@ -19,6 +19,7 @@ const getSchemaType = require('./schema-type');
 const is            = require('./is');
 const rx            = require('./rx');
 const same          = require('./same');
+const smart         = require('./smart-value');
 
 module.exports = Validator;
 
@@ -43,13 +44,15 @@ function Validator(enforce, definitions, throwErrors) {
  * @returns {Validator}
  */
 Validator.prototype.array = function(schema, at, array) {
-    const length = array.length;
+    if (Array.isArray(array)) {
+        const length = array.length;
 
-    this.arrayLength(schema, at, length);
-    this.arrayUniqueItems(schema, at, [], array);
+        this.arrayLength(schema, at, length);
+        this.arrayUniqueItems(schema, at, [], array);
 
-    if (schema.items) {
-        for (let i = 0; i < length; i++) this.validate(schema.items, at + '/' + i, array[i]);
+        if (schema.items) {
+            for (let i = 0; i < length; i++) this.validate(schema.items, at + '/' + i, array[i]);
+        }
     }
 
     return this;
@@ -194,29 +197,33 @@ Validator.prototype.error = function(at, message, code) {
 Validator.prototype.number = function(schema, at, number) {
     const enforce = this.enforce;
 
-    // validate maximum
-    if (enforce.maximum && schema.hasOwnProperty('maximum')) {
-        if (schema.exclusiveMaximum && number === schema.maximum) {
-            this.error(at, 'Value ' + number + ' over exclusive maximum ' + schema.maximum, 'NMAX');
-        }
-        if (number > schema.maximum) {
-            this.error(at, 'Value ' + number + ' over ' + (schema.exclusiveMaximum ? 'exclusive ' : '') + 'maximum ' + schema.maximum, 'NMAX');
-        }
-    }
+    if (typeof number === 'number') {
 
-    // validate minimum
-    if (enforce.minimum && schema.hasOwnProperty('minimum')) {
-        if (schema.exclusiveMinimum && number === schema.minimum) {
-            this.error(at, 'Value ' + number + ' under exclusive minimum ' + schema.minimum, 'NMIN');
+        // validate maximum
+        if (enforce.maximum && schema.hasOwnProperty('maximum')) {
+            if (schema.exclusiveMaximum && number === schema.maximum) {
+                this.error(at, 'Value ' + number + ' over exclusive maximum ' + schema.maximum, 'NMAX');
+            }
+            if (number > schema.maximum) {
+                this.error(at, 'Value ' + number + ' over ' + (schema.exclusiveMaximum ? 'exclusive ' : '') + 'maximum ' + schema.maximum, 'NMAX');
+            }
         }
-        if (number < schema.minimum) {
-            this.error(at, 'Value ' + number + ' under ' + (schema.exclusiveMinimum ? 'exclusive ' : '') + 'minimum ' + schema.minimum, 'NMIN');
-        }
-    }
 
-    // validate multiple of
-    if (enforce.multipleOf && schema.hasOwnProperty('multipleOf') && number % schema.multipleOf !== 0) {
-        this.error(at, 'Value ' + number + ' not a multiple of ' + schema.multipleOf, 'NMULT');
+        // validate minimum
+        if (enforce.minimum && schema.hasOwnProperty('minimum')) {
+            if (schema.exclusiveMinimum && number === schema.minimum) {
+                this.error(at, 'Value ' + number + ' under exclusive minimum ' + schema.minimum, 'NMIN');
+            }
+            if (number < schema.minimum) {
+                this.error(at, 'Value ' + number + ' under ' + (schema.exclusiveMinimum ? 'exclusive ' : '') + 'minimum ' + schema.minimum, 'NMIN');
+            }
+        }
+
+        // validate multiple of
+        if (enforce.multipleOf && schema.hasOwnProperty('multipleOf') && number % schema.multipleOf !== 0) {
+            this.error(at, 'Value ' + number + ' not a multiple of ' + schema.multipleOf, 'NMULT');
+        }
+
     }
 
     return this;
@@ -230,18 +237,21 @@ Validator.prototype.number = function(schema, at, number) {
  * @returns {Validator}
  */
 Validator.prototype.object = function(schema, at, object) {
-    const valueProperties = Object.keys(object);
-    const valuePropertiesLength = valueProperties.length;
+    if (object && typeof object === 'object') {
 
-    const schemas = this.objectSchemas(schema, at, object);
+        const valueProperties = Object.keys(object);
+        const valuePropertiesLength = valueProperties.length;
 
-    this.objectHasRequiredProperties(schemas, at, object);
-    this.objectPropertyLength(schemas, at, valuePropertiesLength);
+        const schemas = this.objectSchemas(schema, at, object);
 
-    // validate all value properties
-    for (let i = 0; i < valuePropertiesLength; i++) {
-        const property = valueProperties[i];
-        this.objectProperty(schemas, at + '/' + property, object[property], property);
+        this.objectHasRequiredProperties(schemas, at, object);
+        this.objectPropertyLength(schemas, at, valuePropertiesLength);
+
+        // validate all value properties
+        for (let i = 0; i < valuePropertiesLength; i++) {
+            const property = valueProperties[i];
+            this.objectProperty(schemas, at + '/' + property, object[property], property);
+        }
     }
 
     return this;
@@ -403,22 +413,26 @@ Validator.prototype.serializable = function(at, value) {
  * @returns {Validator}
  */
 Validator.prototype.string = function(schema, at, string) {
-    const enforce = this.enforce;
-    const length = string.length;
+    if (typeof string === 'string') {
 
-    // validate max length
-    if (enforce.maxLength && schema.hasOwnProperty('maxLength') && length > schema.maxLength) {
-        this.error(at, 'Value ' + string + ' has length (' + length + ') above max length ' + schema.maxLength, 'SMAX');
-    }
+        const enforce = this.enforce;
+        const length = string.length;
 
-    // validate min length
-    if (enforce.minLength && schema.hasOwnProperty('minLength') && length < schema.minLength) {
-        this.error(at, 'Value ' + string + ' has length (' + length + ') below min length ' + schema.minLength, 'SMIN');
-    }
+        // validate max length
+        if (enforce.maxLength && schema.hasOwnProperty('maxLength') && length > schema.maxLength) {
+            this.error(at, 'Value ' + string + ' has length (' + length + ') above max length ' + schema.maxLength, 'SMAX');
+        }
 
-    // validate pattern
-    if (enforce.pattern && schema.hasOwnProperty('pattern') && !(new RegExp(schema.pattern)).test(string)) {
-        this.error(at, 'Value ' + string + ' does not match pattern ' + schema.pattern, 'SPAT');
+        // validate min length
+        if (enforce.minLength && schema.hasOwnProperty('minLength') && length < schema.minLength) {
+            this.error(at, 'Value ' + string + ' has length (' + length + ') below min length ' + schema.minLength, 'SMIN');
+        }
+
+        // validate pattern
+        if (enforce.pattern && schema.hasOwnProperty('pattern') && !(new RegExp(schema.pattern)).test(string)) {
+            this.error(at, 'Value ' + string + ' does not match pattern ' + schema.pattern, 'SPAT');
+        }
+
     }
 
     return this;
@@ -504,7 +518,7 @@ Validator.prototype.type = function(schema, at, value) {
         }
     }
 
-    if (expected) this.error(at, 'Invalid type: Expected ' + expected + '. Received: ' + value, code);
+    if (expected) this.error(at, 'Invalid type: Expected ' + expected + '. Received: ' + smart(value), code);
 
     return this;
 };

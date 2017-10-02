@@ -15,6 +15,7 @@
  *    limitations under the License.
  **/
 'use strict';
+const smart         = require('./smart-value');
 const rx            = require('./rx');
 
 const zeros = '00000000';
@@ -43,7 +44,7 @@ exports.binary = function(value) {
         return binary;
 
     } else {
-        throw Error('Cannot convert to binary. The value must be a boolean, number, string, or buffer. Received: ' + value);
+        throw Error('Cannot convert to binary. The value must be a boolean, number, string, or buffer. Received: ' + smart(value));
     }
 };
 
@@ -80,7 +81,7 @@ exports.byte = function(value) {
         return value.toString('base64');
 
     } else {
-        throw Error('Cannot convert to byte. The value must be a boolean, number, string, or buffer. Received: ' + value);
+        throw Error('Cannot convert to byte. The value must be a boolean, number, string, or buffer. Received: ' + smart(value));
     }
 };
 
@@ -115,7 +116,7 @@ exports.dateTime = function(value) {
         return new Date(value).toISOString();
 
     } else {
-        throw Error('Cannot convert to date. The value must be a Date, a number, or a date string. Received: ' + value);
+        throw Error('Cannot convert to date. The value must be a Date, a number, or a date string. Received: ' + smart(value));
     }
 };
 
@@ -137,7 +138,7 @@ exports.integer = function(value) {
         }
     }
 
-    throw Error('Cannot convert to integer. The value must be numeric. Received: ' + value);
+    throw Error('Cannot convert to integer. The value must be numeric. Received: ' + smart(value));
 };
 
 /**
@@ -158,7 +159,7 @@ exports.number = function(value) {
         }
     }
 
-    throw Error('Cannot convert to number. The value must be numeric. Received: ' + value);
+    throw Error('Cannot convert to number. The value must be numeric. Received: ' + smart(value));
 };
 
 /**
@@ -174,7 +175,7 @@ exports.string = function(value) {
             return String(value);
     }
 
-    throw Error('Cannot convert to string. The value must be a string, a number, or a boolean. Received: ' + value);
+    throw Error('Cannot convert to string. The value must be a string, a number, or a boolean. Received: ' + smart(value));
 };
 
 function decToBin(dec) {
