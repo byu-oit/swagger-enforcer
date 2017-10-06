@@ -1,8 +1,18 @@
 'use strict';
+const parser        = require('swagger-parser');
 const Swagger       = require('./bin-2/swagger');
 
+/**
+ * Load a swagger enforcer instance.
+ * @param {string|object} definition
+ * @param {object} [options]
+ * @returns {Promise.<Swagger>}
+ */
 exports.v2 = function(definition, options) {
-    return new Swagger(2, definition, options);
+    return parser.validate(definition)
+        .then(schema => {
+            return new Swagger(2, definition, options);
+        });
 };
 
 exports.v3 = function(definition, options) {

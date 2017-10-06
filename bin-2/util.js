@@ -22,19 +22,8 @@
  * @returns {*}
  */
 exports.copy = function(value) {
-    if (value instanceof Date) {
-        return new Date(+value);
-    } else if (value instanceof Buffer) {
-        return value.slice(0);
-    } else if (Array.isArray(value)) {
-        return value.map(exports.copy);
-    } else if (value && typeof value === 'object') {
-        const result = {};
-        Object.keys(value).forEach(key => result[key] = exports.copy(value[key]));
-        return result;
-    } else {
-        return value;
-    }
+    const map = new Map();
+    return copy(map, value);
 };
 
 exports.edgeSlashes = function(value, start, end) {
@@ -114,3 +103,34 @@ exports.smart = function(value) {
     if (typeof value === 'string') return "'" + value.replace(/'/g, "\\'") + "'";
     return value;
 };
+
+
+function copy(map, value) {
+    if (value instanceof Date) {
+        return new Date(+value);
+
+    } else if (value instanceof Buffer) {
+        return value.slice(0);
+
+    } else if (Array.isArray(value)) {
+        let result = map.get(value);
+        if (result) return result;
+
+        result = [];
+        map.set(value, result);
+        value.forEach(v => result.push(copy(map, v)));
+        return result;
+
+    } else if (value && typeof value === 'object') {
+        let result = map.get(value);
+        if (result) return result;
+
+        result = {};
+        map.set(value, result);
+        Object.keys(value).forEach(key => result[key] = copy(map, value[key]));
+        return result;
+
+    } else {
+        return value;
+    }
+}

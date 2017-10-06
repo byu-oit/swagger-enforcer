@@ -31,7 +31,6 @@ const map = new WeakMap();
  * @constructor
  */
 function Swagger(version, definition, defaultOptions) {
-    const swagger = this;
 
     // use the version to determine what functions to use
     version = parseInt(version);
@@ -47,6 +46,7 @@ function Swagger(version, definition, defaultOptions) {
     const defaults = Object.assign({}, defaultOptions);
     defaults.enforce = Object.assign({}, defaults.enforce, functions.defaults.enforce);
     defaults.populate = Object.assign({}, defaults.populate, functions.defaults.populate);
+    defaults.request = Object.assign({}, defaults.request, functions.defaults.request);
     defaults.validate = Object.assign({}, defaults.validate, functions.defaults.validate);
 
     // build path parser functions
@@ -69,10 +69,7 @@ function Swagger(version, definition, defaultOptions) {
                 if (!match) return undefined;
 
                 const params = {};
-                names.forEach((name, index) => {
-                    params[name] = swagger.format(match[index + 1], schema.parameters[name]);
-                });
-
+                names.forEach((name, index) => params[name] = match[index + 1]);
                 return params;
             },
             schema: schema
@@ -121,13 +118,6 @@ Swagger.prototype.enforce = function(schema, options, initialValue) {
 Swagger.prototype.format = formatBySchema;
 
 /**
- * Convert input into values.
- * @param {*} value
- * @param {object} schema
- */
-Swagger.prototype.parse = parseBySchema;
-
-/**
  * Get details about the matching path.
  * @param {string} path
  * @param {string} [subPath]
@@ -160,6 +150,72 @@ Swagger.prototype.path = function(path, subPath) {
  */
 Swagger.prototype.populate = function(schema, map, initialValue) {
 
+};
+
+/**
+ * Convert input into values.
+ * @param {object|string} request A request object or the path to use with GET method.
+ * @param {string|object} [request.body] The body of the request
+ * @param {string|Object.<string,string>} [request.header] The request header as a string or object
+ * @param {string} [request.method=GET] The request method.
+ * @param {string} request.path The request path. The path can contain the query parameters.
+ * @param {string} [request.query] The request query. If the path also has the query defined then this query will overwrite the path query parameters.
+ */
+Swagger.prototype.request = function(request) {
+    let type;
+
+    // process and validate input parameter
+    if (typeof request === 'string') request = { path: request };
+    if (typeof request !== 'object') throw Error('Expected an object or a string. Received: ' + util.smart(request));
+
+    // normalize and validate body
+    type = typeof request.body;
+    if (type !== 'string' || type !== 'object') throw Error('Invalid request body. Expected a string or an object. Received: ' + util.smart(request.body));
+
+    // normalize and validate header
+    if (!request.header) request.header = {};
+    type = typeof request.header;
+    if (type === 'string') {
+        request.header = request.header.split('\n')
+            .reduce((p, c) => {
+                const match = /^([^:]+):([\s\S]*?)$/.exec(c);
+                p[match[1].toLowerCase()] = match[2] || '';
+                return p;
+            }, {});
+    } else if (type === 'object') {
+        const header = {};
+        Object.keys(request.header).forEach(key => header[key.toLowerCase()] = request.header[key]);
+        request.header = header;
+    } else {
+        throw Error('Invalid request header specified. Expected a string or an object. Received: ' + util.smart(request.header));
+    }
+
+    // normalize and validate method
+    request.method = request.method ? request.method.toLowerCase() : 'get';
+    if (['get', 'post', 'put', 'delete', 'options', 'head', 'patch'].indexOf(request.method) === -1) {
+        throw Error('Invalid request method specified. Expected on of: GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH. Received: ' + util.smart(request.method));
+    }
+
+    // validate path
+    if (typeof request.path !== 'string') throw Error('Invalid request path specified. Expected a string. Received: ' + util.smart(request.path));
+    const pathComponents = request.path.split('?');
+    request.path = pathComponents[0];
+
+    // normalize and validate query
+    const query = pathComponents[1] || request.query || '';
+    if (typeof request.query !== 'string') throw Error('Invalid request query. Expected a string or an object with values that are arrays of strings/undefined. Received: ' + util.smart(request.query));
+    request.query = query.split('&').map(v => {
+        const ar = v.split('=');
+        return { name: ar[0], value: ar[1] };
+    });
+
+    // find the matching path
+    const path = this.path(request.path);
+    if (!path) throw Error('Requested path not defined in the swagger document: ' + request.path);
+    if (!path.schema[request.method]) throw Error('Requested method is not defined in the swagger document for this path: ' + request.method + ' ' + request.path);
+
+    const store = map.get(this);
+    return store.functions.request(this, request, path, store);
 };
 
 /**
@@ -221,10 +277,6 @@ Swagger.is = require('./is');
 
 Swagger.format = formatBySchema;
 
-Swagger.from = parse;
-
-Swagger.parse = parseBySchema;
-
 Swagger.to = format;
 
 /**
@@ -283,30 +335,19 @@ function formatBySchema(value, schema) {
     }
 }
 
-function parseBySchema(value, schema) {
-    const type = util.schemaType(schema);
-    switch (type) {
-        case 'array':
-
-            break;
-        case 'boolean':
-        case 'integer':
-        case 'number':
-            return parse[type](value);
-            break;
-        case 'string':
-            switch (schema.format) {
-                case 'binary':
-                case 'byte':
-                case 'date':
-                case 'date-time':
-                    return parse[schema.format](value);
-                    break;
-                default:
-                    return parse.string(value);
-            }
-        case 'object':
-
-            break;
-    }
+/**
+ * Parse query parameters into an object map.
+ * @param string
+ * @returns {Object.<string,Array.<string|undefined>>}
+ */
+function parseQueryParameters(string) {
+    const result = {};
+    string.split('&').forEach(set => {
+        const keyValuePair = set.split('=');
+        const key = decodeURIComponent(keyValuePair[0]);
+        const value = keyValuePair[1];
+        if (!result[key]) result[key] = [];
+        result[key].push(value === undefined ? undefined : decodeURIComponent(value));
+    });
+    return result;
 }
