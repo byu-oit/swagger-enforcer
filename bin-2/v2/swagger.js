@@ -16,6 +16,7 @@
  **/
 'use strict';
 const util      = require('../util');
+const validate  = require('../validate');
 
 exports.defaults = {
 
@@ -119,13 +120,6 @@ exports.request = function(context, request, path, store) {
     //                              //
     //////////////////////////////////
 
-    // parse body or formData (mutually exclusive)
-    if (parameters.body) {
-        result.body = parseSchema(errors, 'Error in body at ', parameters.body, request.body);
-    } else {
-        // TODO: parse form data?
-    }
-
     // iterate through header
     Object.keys(request.header).forEach(name => {
         const schema = parameters.header[name];
@@ -136,6 +130,14 @@ exports.request = function(context, request, path, store) {
             header[name] = value;
         }
     });
+
+    // parse body or formData (mutually exclusive)
+    if (parameters.body) {
+        result.body = parseSchema(errors, 'Error in body at ', parameters.body, request.body);
+    } else if (header['content-type'] === 'application/x-www-form-urlencoded') {
+
+        // TODO: parse form data?
+    }
 
     // iterate through path parameters
     Object.keys(path.params).forEach(name => {
@@ -181,7 +183,7 @@ exports.request = function(context, request, path, store) {
     return result;
 };
 
-// TODO: rework this to use validate.js logic
+// parse external input
 function parse(errors, prefix, schema, value) {
     const errorsLength = errors.length;
     let length;
@@ -203,7 +205,7 @@ function parse(errors, prefix, schema, value) {
                     result = value.split(',');
                     break;
             }
-            validateArray(errors, prefix, schema.items, result);
+            validate.array(errors, prefix, schema.items, result);
             return result.map((v, i) => parse(errors, prefix + '/' + i, schema.items, v));
 
         case 'boolean':
@@ -212,41 +214,34 @@ function parse(errors, prefix, schema, value) {
 
         case 'integer':
             result = +value;
-            const rounded = Math.round(result);
-            if (isNaN(result) || rounded !== result) errors.push(prefix + ': Expected an integer. Received: ' + util.smart(value));
-            validateNumber(errors, prefix, schema, result);
+            validate.integer(errors, prefix, schema, result);
             return result;
 
         case 'number':
             result = +value;
-            validateNumber(errors, prefix, schema, result);
+            validate.number(errors, prefix, schema, result);
             return result;
 
         case 'string':
             switch (schema.format) {
-                case 'byte':
-                    if (/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) errors.push(prefix + ': Expected a base64 string. Received: ' + util.smart(value));
-                    validateEnum(errors, prefix, schema, value);
-                    return new Buffer(value, 'base64');
-
                 case 'binary':
-                    if (!/^(?:[01]{8})+$/.test(value)) errors.push(prefix + ': Expected a binary string. Received: ' + util.smart(value));
-                    validateEnum(errors, prefix, schema, value);
+                    validate.binary(errors, prefix, schema, value);
                     return new Buffer(value, 'binary');
 
+                case 'byte':
+                    validate.byte(errors, prefix, schema, value);
+                    return new Buffer(value, 'base64');
+
                 case 'date':
-                    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) errors.push(prefix + ': Expected a full-date string as described by RFC3339 at https://xml2rfc.tools.ietf.org/public/rfc/html/rfc3339.html#anchor14. Received: ' + util.smart(value));
-                    validateEnum(errors, prefix, schema, value);
+                    validate.date(errors, prefix, schema, value);
                     return new Date(value + 'T00:00:00.000Z');
 
                 case 'date-time':
-                    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) errors.push(prefix + ': Expected a date-time as described by RFC3339 at https://xml2rfc.tools.ietf.org/public/rfc/html/rfc3339.html#anchor14. Received: ' + util.smart(value));
-                    validateEnum(errors, prefix, schema, value);
+                    validate.dateTime(errors, prefix, schema, value);
                     return new Date(value);
 
                 default:
-                    validateEnum(errors, prefix, schema, value);
-                    validateString(errors, prefix, schema, value);
+                    validate.string(errors, prefix, schema, value);
                     return value;
             }
             break;
@@ -255,28 +250,4 @@ function parse(errors, prefix, schema, value) {
 
 function parseSchema(errors, schema, value) {
 
-}
-
-function validateArray(errors, prefix, schema, value) {
-    const length = value.length;
-
-    if (schema.maxItems < length) errors.push(prefix + ': Array length above maximum length of ' + schema.maxItems + ' with ' + length + ' items.');
-    if (schema.minItems > length) errors.push(prefix + ': Array length below minimum length of ' + schema.minItems + ' with ' + length + ' items.');
-    if (schema.uniqueItems) {
-        const singles = [];
-        value.forEach((item, index) => {
-            const length = singles.length;
-            let found;
-            for (let i = 0; i < length; i++) {
-                if (util.same(item, singles[i])) {
-                    errors.push(prefix + ': Array values must be unique. Value is not unique at index ' + index + ': ' + item);
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) singles.push(item);
-        });
-    }
-
-    return errors;
 }

@@ -155,7 +155,7 @@ Swagger.prototype.populate = function(schema, map, initialValue) {
 /**
  * Convert input into values.
  * @param {object|string} request A request object or the path to use with GET method.
- * @param {string|object} [request.body] The body of the request
+ * @param {string|object} [request.body] The body of the request.
  * @param {string|Object.<string,string>} [request.header] The request header as a string or object
  * @param {string} [request.method=GET] The request method.
  * @param {string} request.path The request path. The path can contain the query parameters.
@@ -336,18 +336,90 @@ function formatBySchema(value, schema) {
 }
 
 /**
- * Parse query parameters into an object map.
+ * Parse the body if a string is supplied.
+ * @param contentType
  * @param string
- * @returns {Object.<string,Array.<string|undefined>>}
+ * @returns {Array|*|{}}
  */
-function parseQueryParameters(string) {
-    const result = {};
-    string.split('&').forEach(set => {
-        const keyValuePair = set.split('=');
-        const key = decodeURIComponent(keyValuePair[0]);
-        const value = keyValuePair[1];
-        if (!result[key]) result[key] = [];
-        result[key].push(value === undefined ? undefined : decodeURIComponent(value));
-    });
-    return result;
+function parseBody(contentType, string) {
+    switch (contentType) {
+        case 'application/json':
+            return JSON.parse(string);
+
+        case 'application/x-www-form-urlencoded':
+            return string
+                .split('&')
+                .map(set => {
+                    const keyValuePair = set.split('=');
+                    const value = keyValuePair[1] || '';
+                    return {
+                        headers: {},
+                        name: decodeURIComponent(keyValuePair[0].replace(/\+/g, ' ')),
+                        value: decodeURIComponent(value.replace(/\+/g, ' '))
+                    };
+                });
+
+        case 'multipart/form-data':
+            return parseMultipart(string);
+    }
+}
+
+/**
+ * Parse multipart/form-data
+ * @param {string} string
+ */
+function parseMultipart(string) {
+    const lines = string.split('\r\n');
+    const rxEmptyLine = /^ *$/;
+    const rxBoundary = /^content-type: multipart\/form-data; boundary=([\s\S]+?)$/i;
+
+
+
+    function scanHeaders() {
+
+    }
+
+    function extractBoundaryId() {
+
+    }
+
+    function scanField() {
+
+    }
+
+
+
+
+
+    const headers = {};
+
+    let line;
+    while (line = lines.shift()) {
+        let match;
+
+        if (rxEmptyLine.test(line)) {
+
+        } else if (match = rxBoundary.exec(line)) {
+
+        }
+
+
+
+        if (/^ *$/.test(line)) {
+
+        } else if () {
+
+
+
+
+            const match = /^([^:]+): ?([\s\S]+?)$/.exec(line) || { 0: '', 1: '' };
+            const name = match[1].toLowerCase();
+            const value = match[2].toLowerCase();
+
+            if (name) headers[name] = value;
+            if (name === 'content-type') {
+
+            }
+        }
+    }
 }
