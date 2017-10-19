@@ -16,7 +16,6 @@
  **/
 'use strict';
 const format        = require('./format');
-const parse         = require('./parse');
 const util          = require('./util');
 
 module.exports = Swagger;
