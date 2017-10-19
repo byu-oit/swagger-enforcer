@@ -16,6 +16,7 @@
  **/
 'use strict';
 const format        = require('./format');
+const multipart     = require('./multipart-parser');
 const util          = require('./util');
 
 module.exports = Swagger;
@@ -166,10 +167,7 @@ Swagger.prototype.request = function(request) {
     // process and validate input parameter
     if (typeof request === 'string') request = { path: request };
     if (typeof request !== 'object') throw Error('Expected an object or a string. Received: ' + util.smart(request));
-
-    // normalize and validate body
-    type = typeof request.body;
-    if (type !== 'string' || type !== 'object') throw Error('Invalid request body. Expected a string or an object. Received: ' + util.smart(request.body));
+    request = Object.assign({}, request);
 
     // normalize and validate header
     if (!request.header) request.header = {};
@@ -189,6 +187,22 @@ Swagger.prototype.request = function(request) {
         throw Error('Invalid request header specified. Expected a string or an object. Received: ' + util.smart(request.header));
     }
 
+    // normalize and validate body
+    type = typeof request.body;
+    if (type !== 'string' || type !== 'object') throw Error('Invalid request body. Expected a string or an object. Received: ' + util.smart(request.body));
+    if (type === 'string') {
+        switch (request.header['content-type']) {
+            case 'application/json':
+                request.body = JSON.parse(request.body);
+                break;
+            case 'application/x-www-form-urlencoded':
+                request.body = parseQueryString(request.body);
+                break;
+            case 'multipart/form-data':
+                request.body = multipart(request.header, request.body);
+        }
+    }
+
     // normalize and validate method
     request.method = request.method ? request.method.toLowerCase() : 'get';
     if (['get', 'post', 'put', 'delete', 'options', 'head', 'patch'].indexOf(request.method) === -1) {
@@ -201,12 +215,9 @@ Swagger.prototype.request = function(request) {
     request.path = pathComponents[0];
 
     // normalize and validate query
-    const query = pathComponents[1] || request.query || '';
     if (typeof request.query !== 'string') throw Error('Invalid request query. Expected a string or an object with values that are arrays of strings/undefined. Received: ' + util.smart(request.query));
-    request.query = query.split('&').map(v => {
-        const ar = v.split('=');
-        return { name: ar[0], value: ar[1] };
-    });
+    const query = pathComponents[1] ? pathComponents[1] + '&' + request.query : request.query;
+    request.query = parseQueryString(query);
 
     // find the matching path
     const path = this.path(request.path);
@@ -335,90 +346,20 @@ function formatBySchema(value, schema) {
 }
 
 /**
- * Parse the body if a string is supplied.
- * @param contentType
- * @param string
- * @returns {Array|*|{}}
- */
-function parseBody(contentType, string) {
-    switch (contentType) {
-        case 'application/json':
-            return JSON.parse(string);
-
-        case 'application/x-www-form-urlencoded':
-            return string
-                .split('&')
-                .map(set => {
-                    const keyValuePair = set.split('=');
-                    const value = keyValuePair[1] || '';
-                    return {
-                        headers: {},
-                        name: decodeURIComponent(keyValuePair[0].replace(/\+/g, ' ')),
-                        value: decodeURIComponent(value.replace(/\+/g, ' '))
-                    };
-                });
-
-        case 'multipart/form-data':
-            return parseMultipart(string);
-    }
-}
-
-/**
- * Parse multipart/form-data
+ * Parse query string into object mapped to array of values.
  * @param {string} string
+ * @returns {Object.<string, string[]>}
  */
-function parseMultipart(string) {
-    const lines = string.split('\r\n');
-    const rxEmptyLine = /^ *$/;
-    const rxBoundary = /^content-type: multipart\/form-data; boundary=([\s\S]+?)$/i;
-
-
-
-    function scanHeaders() {
-
-    }
-
-    function extractBoundaryId() {
-
-    }
-
-    function scanField() {
-
-    }
-
-
-
-
-
-    const headers = {};
-
-    let line;
-    while (line = lines.shift()) {
-        let match;
-
-        if (rxEmptyLine.test(line)) {
-
-        } else if (match = rxBoundary.exec(line)) {
-
-        }
-
-
-
-        if (/^ *$/.test(line)) {
-
-        } else if () {
-
-
-
-
-            const match = /^([^:]+): ?([\s\S]+?)$/.exec(line) || { 0: '', 1: '' };
-            const name = match[1].toLowerCase();
-            const value = match[2].toLowerCase();
-
-            if (name) headers[name] = value;
-            if (name === 'content-type') {
-
-            }
-        }
-    }
+function parseQueryString(string) {
+    const result = {};
+    string
+        .split('&')
+        .forEach(v => {
+            const ar = v.split('=');
+            const name = ar[0];
+            const value = ar[1];
+            if (!result[name]) result[name] = [];
+            result[name].push(value);
+        });
+    return result;
 }
