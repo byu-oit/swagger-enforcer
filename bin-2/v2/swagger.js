@@ -15,6 +15,7 @@
  *    limitations under the License.
  **/
 'use strict';
+const multipart = require('../multipart-parser');
 const util      = require('../util');
 const validate  = require('../validate');
 
@@ -135,8 +136,7 @@ exports.request = function(context, request, path, store) {
     if (parameters.body) {
         result.body = parseSchema(errors, 'Error in body at ', parameters.body, request.body);
     } else if (header['content-type'] === 'application/x-www-form-urlencoded') {
-
-        // TODO: parse form data?
+        result.body = multipart(header, parameters.body);
     }
 
     // iterate through path parameters
