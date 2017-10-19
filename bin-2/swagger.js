@@ -155,11 +155,11 @@ Swagger.prototype.populate = function(schema, map, initialValue) {
 /**
  * Convert input into values.
  * @param {object|string} request A request object or the path to use with GET method.
- * @param {string|object} [request.body] The body of the request.
- * @param {string|Object.<string,string>} [request.header] The request header as a string or object
+ * @param {string|object} [request.body=''] The body of the request.
+ * @param {string|Object.<string,string>} [request.header={}] The request header as a string or object
  * @param {string} [request.method=GET] The request method.
  * @param {string} request.path The request path. The path can contain the query parameters.
- * @param {string} [request.query] The request query. If the path also has the query defined then this query will overwrite the path query parameters.
+ * @param {string|Object.<string,string|undefined|Array.<string|undefined>>} [request.query={}] The request query. If the path also has the query defined then this query will overwrite the path query parameters.
  */
 Swagger.prototype.request = function(request) {
     let type;
@@ -167,7 +167,17 @@ Swagger.prototype.request = function(request) {
     // process and validate input parameter
     if (typeof request === 'string') request = { path: request };
     if (typeof request !== 'object') throw Error('Expected an object or a string. Received: ' + util.smart(request));
-    request = Object.assign({}, request);
+    request = Object.assign({ body: '', header: {}, method: 'GET', query: {} }, request);
+
+    // validate path
+    if (typeof request.path !== 'string') throw Error('Invalid request path specified. Expected a string. Received: ' + util.smart(request.path));
+    const pathComponents = request.path.split('?');
+    request.path = pathComponents[0];
+
+    // find the matching path
+    const path = this.path(request.path);
+    if (!path) throw Error('Requested path not defined in the swagger document: ' + request.path);
+    if (!path.schema[request.method]) throw Error('Requested method is not defined in the swagger document for this path: ' + request.method + ' ' + request.path);
 
     // normalize and validate header
     if (!request.header) request.header = {};
@@ -204,25 +214,52 @@ Swagger.prototype.request = function(request) {
     }
 
     // normalize and validate method
-    request.method = request.method ? request.method.toLowerCase() : 'get';
+    request.method = request.method.toLowerCase();
     if (['get', 'post', 'put', 'delete', 'options', 'head', 'patch'].indexOf(request.method) === -1) {
         throw Error('Invalid request method specified. Expected on of: GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH. Received: ' + util.smart(request.method));
     }
 
-    // validate path
-    if (typeof request.path !== 'string') throw Error('Invalid request path specified. Expected a string. Received: ' + util.smart(request.path));
-    const pathComponents = request.path.split('?');
-    request.path = pathComponents[0];
-
     // normalize and validate query
-    if (typeof request.query !== 'string') throw Error('Invalid request query. Expected a string or an object with values that are arrays of strings/undefined. Received: ' + util.smart(request.query));
-    const query = pathComponents[1] ? pathComponents[1] + '&' + request.query : request.query;
-    request.query = parseQueryString(query);
+    type = typeof request.query;
+    let queryError;
+    if (type === 'string') {
+        request.query = parseQueryString(request.query);
+    } else if (type === 'object') {
+        const query = {};
+        const keys = Object.keys(request.query);
+        const length = keys.length;
+        for (let i = 0; i < length; i++) {
+            const value = request.query[keys[i]];
+            const type = typeof value;
+            if (type === 'string' || value === undefined) {
+                query[key] = [ value ];
+            } else if (Array.isArray(value)) {
+                const length = value.length;
+                for (let j = 0; j < length; j++) {
+                    const type = typeof value[j];
+                    if (type !== 'string' && type !== 'undefined') {
+                        queryError = true;
+                        break;
+                    }
+                }
+            } else {
+                queryError = true;
+                break;
+            }
+        }
+    } else {
+        queryError = true;
+    }
+    if (queryError) throw Error('Invalid request query. Expected a string or an object with values that are string or arrays of strings/undefined. Received: ' + util.smart(request.query));
 
-    // find the matching path
-    const path = this.path(request.path);
-    if (!path) throw Error('Requested path not defined in the swagger document: ' + request.path);
-    if (!path.schema[request.method]) throw Error('Requested method is not defined in the swagger document for this path: ' + request.method + ' ' + request.path);
+    // merge path component of query with query
+    if (pathComponents[1]) {
+        const query = parseQueryString(pathComponents[1]);
+        Object.keys(query).forEach(key => {
+            if (!request.query[key]) request.query[key] = [];
+            request.query[key].push.apply(request.query[key], query[key]);
+        });
+    }
 
     const store = map.get(this);
     return store.functions.request(this, request, path, store);
