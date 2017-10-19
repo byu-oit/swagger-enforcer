@@ -126,9 +126,3 @@ exports.string = function(value) {
 
     throw Error('Cannot convert to string. The value must be a string, a number, or a boolean. Received: ' + smart(value));
 };
-
-function decToBin(dec) {
-    const binary = (dec >>> 0).toString(2);
-    const mod = binary.length % 8;
-    return mod === 0 ? binary : zeros.substr(mod) + binary;
-}
