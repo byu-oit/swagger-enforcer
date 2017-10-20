@@ -64,6 +64,17 @@ function find(array, filter, index) {
     }
 }
 
+function findEmptyLine(str) {
+    const rxNl = /\r\n|\r|\n/g;
+    let match;
+    let offset = 0;
+    while (match = rxNl.exec(str)) {
+        const sub = str.substring(offset, match.index);
+        if (rx.emptyLine.test(sub)) return match;
+        offset = match.index + match[0].length;
+    }
+}
+
 function getBoundaryId(headers) {
     if (headers['content-type']) {
         const items = splitHeaderValue(headers['content-type']);
@@ -88,11 +99,11 @@ function scanBoundary(content, boundaryId, fields) {
     const sections = boundary.split(new RegExp('^--' + boundaryId + '$', 'm'));
 
     sections.forEach(section => {
-        section = section.replace(rx.newLineStart, '').replace(rx.newLineEnd, '');
-        const match = rx.emptyLine.exec(section);
+        section = trimNewLine(section);
+        const match = findEmptyLine(section);
         if (match) {
-            const headers = scanHeaders(section.substr(0, match.index));
-            const value = section.substr(match.index + match.length);
+            const headers = scanHeaders(trimNewLine(section.substr(0, match.index)));
+            const value = trimNewLine(section.substr(match.index + match.length));
             const field = { headers: headers, content: value };
             let hasSubBoundary;
 
@@ -108,7 +119,7 @@ function scanBoundary(content, boundaryId, fields) {
                 if (boundaryId) {
                     hasSubBoundary = true;
                     const subFields = [];
-                    const subValue = value.substr(boundaryId.length + 2).replace(rx.newLineStart, '').replace(rx.newLineEnd, '');
+                    const subValue = trimNewLine(value.substr(boundaryId.length + 2));
                     scanBoundary(subValue, boundaryId, subFields);
                     subFields.forEach(f => {
                         f.name = field.name;
@@ -138,4 +149,8 @@ function scanHeaders(content) {
 
 function splitHeaderValue(value) {
     return value.split(/; (?=(?:[^"\\]*(?:\\.|"(?:[^"\\]*\\.)*[^"\\]*"))*[^"]*$)/);
+}
+
+function trimNewLine(str) {
+    return str.replace(rx.newLineStart, '').replace(rx.newLineEnd, '');
 }
