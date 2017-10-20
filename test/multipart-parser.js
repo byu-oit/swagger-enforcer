@@ -18,7 +18,7 @@
 const expect        = require('chai').expect;
 const multipart     = require('../bin-2/multipart-parser');
 
-describe.only('multipart form-data parser', () => {
+describe('multipart form-data parser', () => {
 
     describe('nested boundary', () => {
         const str = `--AaB03x
@@ -42,6 +42,153 @@ Content-Transfer-Encoding: binary
 ... contents of file2.gif ...
 --BbC04y--
 --AaB03x--`;
+        let result;
+
+        before(() => {
+            result = multipart({ 'content-type': 'multipart/form-data; boundary=AaB03x' }, str);
+        });
+
+        describe('username', () => {
+
+            it ('has one value', () => {
+                expect(result.username.length).to.equal(1);
+            });
+
+            it('is Larry', () => {
+                expect(result.username[0].content).to.equal('Larry');
+            });
+
+        });
+
+        it('has two files', () => {
+            expect(result.files.length).to.equal(2);
+        });
+
+        describe('first file', () => {
+
+            it('has filename file1.txt', () => {
+                expect(result.files[0].filename).to.equal('file1.txt');
+            });
+
+            it('content', () => {
+                expect(result.files[0].content).to.equal('... contents of file1.txt ...');
+            });
+
+        });
+
+        describe('second file', () => {
+
+            it('filename file2.txt', () => {
+                expect(result.files[1].filename).to.equal('file2.gif');
+            });
+
+            it('content', () => {
+                expect(result.files[1].content).to.equal('... contents of file2.gif ...');
+            });
+
+        });
+    });
+
+    describe('nested boundary \\r', () => {
+        const str = '--AaB03x\rContent-Disposition: form-data; name="username"\r\rLarry\r--AaB03x\rContent-Disposition: form-data; name="files"\rContent-Type: multipart/mixed; boundary=BbC04y\r\r--BbC04y\rContent-Disposition: file; filename="file1.txt"\rContent-Type: text/plain\r\r... contents of file1.txt ...\r--BbC04y\rContent-Disposition: file; filename="file2.gif"\rContent-Type: image/gif\rContent-Transfer-Encoding: binary\r\r... contents of file2.gif ...\r--BbC04y--\r--AaB03x--';
+        let result;
+
+        before(() => {
+            result = multipart({ 'content-type': 'multipart/form-data; boundary=AaB03x' }, str);
+        });
+
+        describe('username', () => {
+
+            it ('has one value', () => {
+                expect(result.username.length).to.equal(1);
+            });
+
+            it('is Larry', () => {
+                expect(result.username[0].content).to.equal('Larry');
+            });
+
+        });
+
+        it('has two files', () => {
+            expect(result.files.length).to.equal(2);
+        });
+
+        describe('first file', () => {
+
+            it('has filename file1.txt', () => {
+                expect(result.files[0].filename).to.equal('file1.txt');
+            });
+
+            it('content', () => {
+                expect(result.files[0].content).to.equal('... contents of file1.txt ...');
+            });
+
+        });
+
+        describe('second file', () => {
+
+            it('filename file2.txt', () => {
+                expect(result.files[1].filename).to.equal('file2.gif');
+            });
+
+            it('content', () => {
+                expect(result.files[1].content).to.equal('... contents of file2.gif ...');
+            });
+
+        });
+    });
+
+    describe('nested boundary \\r', () => {
+        const str = '--AaB03x\rContent-Disposition: form-data; name="username"\r\rLarry\r--AaB03x\rContent-Disposition: form-data; name="files"\rContent-Type: multipart/mixed; boundary=BbC04y\r\r--BbC04y\rContent-Disposition: file; filename="file1.txt"\rContent-Type: text/plain\r\r... contents of file1.txt ...\r--BbC04y\rContent-Disposition: file; filename="file2.gif"\rContent-Type: image/gif\rContent-Transfer-Encoding: binary\r\r... contents of file2.gif ...\r--BbC04y--\r--AaB03x--';
+        let result;
+
+        before(() => {
+            result = multipart({ 'content-type': 'multipart/form-data; boundary=AaB03x' }, str);
+        });
+
+        describe('username', () => {
+
+            it ('has one value', () => {
+                expect(result.username.length).to.equal(1);
+            });
+
+            it('is Larry', () => {
+                expect(result.username[0].content).to.equal('Larry');
+            });
+
+        });
+
+        it('has two files', () => {
+            expect(result.files.length).to.equal(2);
+        });
+
+        describe('first file', () => {
+
+            it('has filename file1.txt', () => {
+                expect(result.files[0].filename).to.equal('file1.txt');
+            });
+
+            it('content', () => {
+                expect(result.files[0].content).to.equal('... contents of file1.txt ...');
+            });
+
+        });
+
+        describe('second file', () => {
+
+            it('filename file2.txt', () => {
+                expect(result.files[1].filename).to.equal('file2.gif');
+            });
+
+            it('content', () => {
+                expect(result.files[1].content).to.equal('... contents of file2.gif ...');
+            });
+
+        });
+    });
+
+    describe('nested boundary \\r\\n', () => {
+        const str = '--AaB03x\r\nContent-Disposition: form-data; name="username"\r\n\r\nLarry\r\n--AaB03x\r\nContent-Disposition: form-data; name="files"\r\nContent-Type: multipart/mixed; boundary=BbC04y\r\n\r\n--BbC04y\r\nContent-Disposition: file; filename="file1.txt"\r\nContent-Type: text/plain\r\n\r\n... contents of file1.txt ...\r\n--BbC04y\r\nContent-Disposition: file; filename="file2.gif"\r\nContent-Type: image/gif\r\nContent-Transfer-Encoding: binary\r\n\r\n... contents of file2.gif ...\r\n--BbC04y--\r\n--AaB03x--';
         let result;
 
         before(() => {
