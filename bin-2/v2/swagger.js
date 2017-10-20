@@ -87,8 +87,16 @@ exports.defaults = {
 
 };
 
-exports.request = function(context, request, path, store) {
+exports.request = function(context, request, strPath, store) {
     const errors = [];
+
+
+
+    // find the matching path
+    const path = this.path(request.path);
+    if (!path) throw Error('Requested path not defined in the swagger document: ' + request.path);
+    if (!path.schema[request.method]) throw Error('Requested method is not defined in the swagger document for this path: ' + request.method + ' ' + request.path);
+
 
     const options = store.defaults.request;
     const purge = options.purge;
@@ -98,12 +106,12 @@ exports.request = function(context, request, path, store) {
 
     const formData = {};
     const header = {};
-    const path = {};
+    const params = {};
     const query = {};
     const result = {
         formData: formData,
         header: header,
-        path: path,
+        path: params,
         query: query
     };
 
