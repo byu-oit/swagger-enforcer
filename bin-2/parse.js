@@ -19,110 +19,75 @@ const smart         = require('./util').smart;
 const rx            = require('./rx');
 
 /**
- * Convert value from a binary octet string to a buffer.
+ * Parse client supplied binary string to a buffer.
  * @param {string} value
  * @returns {Buffer}
  */
 exports.binary = function(value) {
-    if (!/^(?:[01]{8})+$/.test(value)) throw Error('Expected a binary octet string. Received: ' + smart(value));
+    if (!rx.binary.test(value)) throw Error('Expected a binary octet string. Received: ' + smart(value));
     return Buffer.from ? Buffer.from(value, 'binary') : new Buffer(value, 'binary');
 };
 
 /**
- * Convert a value to a boolean.
+ * Parse client supplied boolean.
  * @param {*} value
  * @returns {boolean}
  */
 exports.boolean = function(value) {
+    if (typeof value === 'boolean') return value;
+    if (value === undefined) return false;
     if (value === 'false') return false;
-    return !!value;
+    if (value === 'true') return true;
+    throw Error('Expected "true", "false" or a boolean. Received: ' + smart(value));
 };
 
 /**
- * Convert from base64 encoded string to a buffer.
+ * Parse client supplied base64 encoded string to a buffer.
  * @param {boolean, number, string, buffer} value
  * @returns {string}
  */
 exports.byte = function(value) {
-    if (value.length % 4 !== 0 || !/^[A-Za-z0-9+\/]+=*$/.test(value)) throw Error('Expected a base64 string. Received: ' + smart(value));
+    if (value.length % 4 !== 0 || !rx.byte.test(value)) throw Error('Expected a base64 string. Received: ' + smart(value));
     return Buffer.from ? Buffer.from(value, 'base64') : new Buffer(value, 'binary');
 };
 
 /**
- * Take a number, date value, or a date string and convert to date format.
- * @param {Date, string, number} value
- * @returns {string}
+ * Parse client supplied date string into a Date object.
+ * @param {string} value
+ * @returns {Date}
  */
 exports.date = function(value) {
-    const date = exports.dateTime(value);
-    date.setUTCHours(0, 0, 0, 0);
-    return date;
+    if (!rx.date.test(value)) throw Error('Expected a date string of the format: YYYY-MM-DD. Received: ' + smart(value));
+    return new Date(value + 'T00:00:00.000Z');
 };
 
 /**
- * Take a number, date value, or a date string and convert to ISO date format.
- * @param {Date, string, number} value
+ * Parse client supplied date-time string into a Date object.
+ * @param {string} value
  * @returns {Date}
  */
 exports.dateTime = function(value) {
-    const type = typeof value;
-    const isString = type === 'string';
-
-    if (isString && rx.dateTime.test(value)) {
-        return new Date(value);
-
-    } else if (isString && rx.date.test(value)) {
-        return new Date(value + 'T00:00:00.000Z');
-
-    } else if (value instanceof Date) {
-        return new Date(+value);
-
-    } else if (type === 'number') {
-        return new Date(value);
-
-    } else {
-        throw Error('Cannot convert to date. The value must be a Date, a number, or a date string. Received: ' + smart(value));
-    }
+    if (!rx.dateTime.test(value)) throw Error('Expected a date-time string of the format: YYYY-MM-DDThh:mm:ss.sss. Received: ' + smart(value));
+    return new Date(value);
 };
 exports['date-time'] = exports.dateTime;
 
 /**
- * Convert a value to an integer.
+ * Parse client supplied value to an integer.
  * @param {*} value
  * @returns {number}
  */
 exports.integer = function(value) {
-    const result = +value;
-    if (isNaN(result)) throw Error('Cannot convert to integer. The value must be numeric. Received: ' + smart(value));
-    return Math.round(result);
+    if (!rx.integer.test(value)) throw Error('Cannot convert to integer. The value must be numeric without decimals. Received: ' + smart(value));
+    return +value;
 };
 
 /**
- * Convert a value to a number.
+ * Parse client supplied value to a number.
  * @param {string, number, boolean} value
  * @returns {number}
  */
 exports.number = function(value) {
-    const result = +value;
-    if (isNaN(result)) throw Error('Cannot convert to number. The value must be numeric. Received: ' + smart(value));
-    return result;
-};
-
-/**
- * Convert a value to a string.
- * @param {string, number, boolean, object, date} value
- * @returns {string}
- */
-exports.string = function(value) {
-    switch (typeof value) {
-        case 'boolean':
-        case 'number':
-        case 'string':
-            return String(value);
-        case 'object':
-            if (value instanceof Date) return value.toISOString();
-            return JSON.stringify(value);
-    }
-
-    throw Error('Cannot convert to string. The value must be a string, a number, or a boolean. Received: ' + smart(value));
+    if (!rx.number.test(value)) throw Error('Cannot convert to number. The value must be numeric. Received: ' + smart(value));
+    return +value;
 };
