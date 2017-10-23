@@ -19,22 +19,18 @@ const format        = require('./format');
 const multipart     = require('./multipart-parser');
 const util          = require('./util');
 
+const PROTECTED = Symbol('protected');
+
 module.exports = Swagger;
 
 /**
  * Produce a swagger instance.
- * @param {number} version The swagger version to use.
+ * @param {object} functions The swagger version specific functions and defaults
  * @param {object} definition The swagger definition object.
  * @param {object} [defaultOptions]
  * @constructor
  */
-function Swagger(version, definition, defaultOptions) {
-
-    // use the version to determine what functions to use
-    version = parseInt(version);
-    let functions;
-    if (version === 2) functions = require('./v2/swagger');
-    if (!functions) throw Error('Unsupported version of swagger specified. Use one of the following versions: 2');
+function Swagger(functions, definition, defaultOptions) {
 
     // validate definition
     if (!definition || typeof definition !== 'object') throw Error('Invalid swagger definition. Expected an object. Received: ' + definition);
@@ -47,42 +43,44 @@ function Swagger(version, definition, defaultOptions) {
     defaults.request = Object.assign({}, defaults.request, functions.defaults.request);
     defaults.validate = Object.assign({}, defaults.validate, functions.defaults.validate);
 
+    // set some properties
+    this.defaults = defaults;
+    this.definition = definition || {};
+    this.functions = functions;
+    this.pathParsers = [];
+
     // build path parser functions
-    const pathParsers = [];
     if (!definition.paths || typeof definition.paths !== 'object') definition.paths = {};
-    Object.keys(definition.paths).forEach(path => {
-        const edgedPath = util.edgeSlashes(path, true, true);
-        const rx = new RegExp('^' + edgedPath.replace(/\/{[\s\S]+?}\//g, '\/([^\\/]+?)\/') + '$');
-        const schema = definition.paths[path];
-
-        const names = [];
-        const namesRx = /\/{([\s\S]+?)}\//g;
-        let match;
-        while (match = namesRx.exec(edgedPath)) names.push(match[1]);
-
-        pathParsers.push({
-            path: path,
-            parse: function(str) {
-                const match = rx.exec(str);
-                if (!match) return undefined;
-
-                const params = {};
-                names.forEach((name, index) => params[name] = match[index + 1]);
-                return params;
-            },
-            schema: schema
-        });
-    });
-
-    // store protected variables
-    const store = {
-        defaults: defaults,
-        definition: definition || {},
-        functions: functions,
-        pathParsers: pathParsers
-    };
-    this._ = store;
+    Object.keys(definition.paths).forEach(path => this.definePath(path, definition.paths[path]));
 }
+
+/**
+ * Define a new path.
+ * @param {string} path
+ * @param {object} definition
+ */
+Swagger.prototype.definePath = function(path, definition) {
+    const edgedPath = util.edgeSlashes(path, true, true);
+    const rx = new RegExp('^' + edgedPath.replace(/\/{[\s\S]+?}\//g, '\/([^\\/]+?)\/') + '$');
+
+    const names = [];
+    const namesRx = /\/{([\s\S]+?)}\//g;
+    let match;
+    while (match = namesRx.exec(edgedPath)) names.push(match[1]);
+
+    this.pathParsers.push({
+        definition: definition,
+        path: path,
+        parse: function(str) {
+            const match = rx.exec(str);
+            if (!match) return undefined;
+
+            const params = {};
+            names.forEach((name, index) => params[name] = match[index + 1]);
+            return params;
+        }
+    });
+};
 
 /**
  * Check a value against a schema for errors.
@@ -92,7 +90,7 @@ function Swagger(version, definition, defaultOptions) {
  * @returns {string[]|undefined}
  */
 Swagger.prototype.errors = function(schema, value, options) {
-    const store = this._;
+    const store = this[PROTECTED];
     options = Object.assign({}, options, store.defaults);
 };
 
@@ -122,7 +120,7 @@ Swagger.prototype.format = formatBySchema;
  * @returns {{path: string, params: Object.<string, *>, schema: object}|undefined}
  */
 Swagger.prototype.path = function(path, subPath) {
-    const parsers = this._.pathParsers;
+    const parsers = this[PROTECTED].pathParsers;
 
     // normalize path
     if (!path) path = '';
@@ -167,75 +165,75 @@ Swagger.prototype.request = function(request) {
     if (arguments.length === 0) request = '';
     if (typeof request === 'string') request = { path: request };
     if (!request || typeof request !== 'object') throw Error('Expected an object or a string. Received: ' + util.smart(request));
-    request = Object.assign({ body: '', header: {}, method: 'GET', path: '', query: {} }, request);
+    const req = Object.assign({ body: '', header: {}, method: 'GET', path: '', query: {} }, request);
 
     // validate path
-    if (typeof request.path !== 'string') throw Error('Invalid request path specified. Expected a string. Received: ' + util.smart(request.path));
-    const pathComponents = request.path.split('?');
-    request.path = '/' + pathComponents[0].replace(/^\//, '').replace(/\/$/, '');
+    if (typeof req.path !== 'string') throw Error('Invalid request path specified. Expected a string. Received: ' + util.smart(req.path));
+    const pathComponents = req.path.split('?');
+    req.path = '/' + pathComponents[0].replace(/^\//, '').replace(/\/$/, '');
 
     // normalize and validate header
-    type = typeof request.header;
+    type = typeof req.header;
     if (type === 'string') {
-        request.header = request.header.split('\n')
+        req.header = req.header.split('\n')
             .reduce((p, c) => {
                 const match = /^([^:]+): ([\s\S]*?)\r?$/.exec(c);
                 p[match[1].toLowerCase()] = match[2] || '';
                 return p;
             }, {});
-    } else if (request.header && type === 'object') {
+    } else if (req.header && type === 'object') {
         const header = {};
-        const keys = Object.keys(request.header);
+        const keys = Object.keys(req.header);
         const length = keys.length;
         for (let i = 0; i < length; i++) {
             const key = keys[i];
-            const value = request.header[key];
+            const value = req.header[key];
             if (typeof value !== 'string') {
                 hasError = true;
                 break;
             }
             header[key.toLowerCase()] = value;
         }
-        request.header = header;
+        req.header = header;
     } else {
         hasError = true;
     }
-    if (hasError) throw Error('Invalid request header specified. Expected a string or an object. Received: ' + util.smart(request.header));
+    if (hasError) throw Error('Invalid request header specified. Expected a string or an object. Received: ' + util.smart(req.header));
 
     // normalize and validate body
-    type = typeof request.body;
-    if (type !== 'string' && type !== 'object') throw Error('Invalid request body. Expected a string or an object. Received: ' + util.smart(request.body));
-    if (type === 'string' && request.body && request.header['content-type']) {
-        const contentType = request.header['content-type'];
+    type = typeof req.body;
+    if (type !== 'string' && type !== 'object') throw Error('Invalid request body. Expected a string or an object. Received: ' + util.smart(req.body));
+    if (type === 'string' && req.body && req.header['content-type']) {
+        const contentType = req.header['content-type'];
         const index = contentType.indexOf(';');
         switch (index !== -1 ? contentType.substr(0, index) : contentType) {
             case 'application/json':
-                request.body = JSON.parse(request.body);
+                req.body = JSON.parse(req.body);
                 break;
             case 'application/x-www-form-urlencoded':
-                request.body = parseQueryString(request.body);
+                req.body = parseQueryString(req.body);
                 break;
             case 'multipart/form-data':
-                request.body = multipart(request.header, request.body);
+                req.body = multipart(req.header, req.body);
         }
     }
 
     // normalize and validate method
-    request.method = request.method.toLowerCase();
-    if (['get', 'post', 'put', 'delete', 'options', 'head', 'patch'].indexOf(request.method) === -1) {
-        throw Error('Invalid request method specified. Expected on of: GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH. Received: ' + util.smart(request.method));
+    req.method = req.method.toLowerCase();
+    if (['get', 'post', 'put', 'delete', 'options', 'head', 'patch'].indexOf(req.method) === -1) {
+        throw Error('Invalid request method specified. Expected on of: GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH. Received: ' + util.smart(req.method));
     }
 
     // normalize and validate query
-    type = typeof request.query;
+    type = typeof req.query;
     if (type === 'string') {
-        request.query = parseQueryString(request.query);
+        req.query = parseQueryString(req.query);
     } else if (type === 'object') {
         const query = {};
-        const keys = Object.keys(request.query);
+        const keys = Object.keys(req.query);
         const length = keys.length;
         for (let i = 0; i < length; i++) {
-            const value = request.query[keys[i]];
+            const value = req.query[keys[i]];
             const type = typeof value;
             if (type === 'string' || value === undefined) {
                 query[key] = [ value ];
@@ -256,19 +254,19 @@ Swagger.prototype.request = function(request) {
     } else {
         hasError = true;
     }
-    if (hasError) throw Error('Invalid request query. Expected a string or an object with values that are string or arrays of strings/undefined. Received: ' + util.smart(request.query));
+    if (hasError) throw Error('Invalid request query. Expected a string or an object with values that are string or arrays of strings/undefined. Received: ' + util.smart(req.query));
 
     // merge path component of query with query
     if (pathComponents[1]) {
         const query = parseQueryString(pathComponents[1]);
         Object.keys(query).forEach(key => {
-            if (!request.query[key]) request.query[key] = [];
-            request.query[key].push.apply(request.query[key], query[key]);
+            if (!req.query[key]) req.query[key] = [];
+            req.query[key].push.apply(req.query[key], query[key]);
         });
     }
 
-    const store = this._;
-    return store.functions.request(request);
+    const store = this[PROTECTED];
+    return store.functions.request(req);
 };
 
 /**
@@ -278,7 +276,7 @@ Swagger.prototype.request = function(request) {
  * @returns {object|undefined} Will return undefined if the specified path is invalid.
  */
 Swagger.prototype.schema = function(path, schema) {
-    let result = schema || this._.definition;
+    let result = schema || this[PROTECTED].definition;
 
     // normalize path
     if (!path) path = '';
