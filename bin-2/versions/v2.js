@@ -16,7 +16,6 @@
  **/
 'use strict';
 const multipart = require('../multipart-parser');
-const util      = require('../util');
 const validate  = require('../validate');
 
 exports.defaults = {
@@ -49,7 +48,7 @@ exports.defaults = {
 
     populate: {
         defaults: true,
-        format: false,          // setting this value may hide some errors as values are auto formatted to their correct type
+        format: false,          // setting this value to true may hide some errors as values are auto formatted to their correct type
         templates: true,
         variables: true
     },
@@ -102,7 +101,6 @@ exports.request = function(context, request, strPath, store) {
     const purge = options.purge;
     const strict = options.strict;
     const schema = path.schema;
-    const consumes = store.definition.consumes || schema.consumes || [];
 
     const formData = {};
     const header = {};
@@ -193,8 +191,6 @@ exports.request = function(context, request, strPath, store) {
 
 // parse external input
 function parse(errors, prefix, schema, value) {
-    const errorsLength = errors.length;
-    let length;
     let result;
     switch (schema.type) {
         case 'array':
