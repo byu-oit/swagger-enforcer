@@ -24,8 +24,8 @@ describe.only('request', () => {
         let request;
 
         before(() => {
-            const swagger = new Swagger(2, {});
-            swagger._.functions.request = r => r;
+            const functions = { defaults: {}, request: r => r };
+            const swagger = new Swagger(functions, {});
             request = swagger.request.bind(swagger);
         });
 
