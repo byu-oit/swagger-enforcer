@@ -19,8 +19,6 @@ const format        = require('./format');
 const multipart     = require('./multipart-parser');
 const util          = require('./util');
 
-const PROTECTED = Symbol('protected');
-
 module.exports = Swagger;
 
 /**
@@ -32,20 +30,16 @@ module.exports = Swagger;
  */
 function Swagger(functions, definition, defaultOptions) {
 
-    // validate definition
-    if (!definition || typeof definition !== 'object') throw Error('Invalid swagger definition. Expected an object. Received: ' + definition);
-    definition = util.copy(definition);
-
     // normalize defaults
     const defaults = Object.assign({}, defaultOptions);
-    defaults.enforce = Object.assign({}, defaults.enforce, functions.defaults.enforce);
-    defaults.populate = Object.assign({}, defaults.populate, functions.defaults.populate);
-    defaults.request = Object.assign({}, defaults.request, functions.defaults.request);
-    defaults.validate = Object.assign({}, defaults.validate, functions.defaults.validate);
+    defaults.enforce = Object.assign({}, functions.defaults.enforce, defaults.enforce);
+    defaults.populate = Object.assign({}, functions.defaults.populate, defaults.populate);
+    defaults.request = Object.assign({}, functions.defaults.request, defaults.request);
+    defaults.validate = Object.assign({}, functions.defaults.validate, defaults.validate);
 
     // set some properties
     this.defaults = defaults;
-    this.definition = definition || {};
+    this.definition = definition;
     this.functions = functions;
     this.pathParsers = [];
 
@@ -90,8 +84,7 @@ Swagger.prototype.definePath = function(path, definition) {
  * @returns {string[]|undefined}
  */
 Swagger.prototype.errors = function(schema, value, options) {
-    const store = this[PROTECTED];
-    options = Object.assign({}, options, store.defaults);
+    options = Object.assign({}, options, this.defaults);
 };
 
 /**
@@ -120,7 +113,7 @@ Swagger.prototype.format = formatBySchema;
  * @returns {{path: string, params: Object.<string, *>, schema: object}|undefined}
  */
 Swagger.prototype.path = function(path, subPath) {
-    const parsers = this[PROTECTED].pathParsers;
+    const parsers = this.pathParsers;
 
     // normalize path
     if (!path) path = '';
@@ -265,8 +258,7 @@ Swagger.prototype.request = function(request) {
         });
     }
 
-    const store = this[PROTECTED];
-    return store.functions.request(req);
+    return this.functions.request(req);
 };
 
 /**
@@ -276,7 +268,7 @@ Swagger.prototype.request = function(request) {
  * @returns {object|undefined} Will return undefined if the specified path is invalid.
  */
 Swagger.prototype.schema = function(path, schema) {
-    let result = schema || this[PROTECTED].definition;
+    let result = schema || this.definition;
 
     // normalize path
     if (!path) path = '';
