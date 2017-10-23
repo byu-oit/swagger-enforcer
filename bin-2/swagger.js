@@ -356,8 +356,6 @@ Swagger.prototype.validate = function(schema, value, options) {
 
 Swagger.is = require('./is');
 
-Swagger.format = formatBySchema;
-
 Swagger.to = format;
 
 /**
