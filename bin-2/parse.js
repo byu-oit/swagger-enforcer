@@ -15,8 +15,8 @@
  *    limitations under the License.
  **/
 'use strict';
+const is            = require('./is');
 const smart         = require('./util').smart;
-const rx            = require('./rx');
 
 /**
  * Parse client supplied binary string to a buffer.
@@ -24,7 +24,7 @@ const rx            = require('./rx');
  * @returns {Buffer}
  */
 exports.binary = function(value) {
-    if (!rx.binary.test(value)) throw Error('Expected a binary octet string. Received: ' + smart(value));
+    if (!is.binary(value)) throw Error('Expected a binary octet string. Received: ' + smart(value));
     return Buffer.from ? Buffer.from(value, 'binary') : new Buffer(value, 'binary');
 };
 
@@ -47,7 +47,7 @@ exports.boolean = function(value) {
  * @returns {string}
  */
 exports.byte = function(value) {
-    if (value.length % 4 !== 0 || !rx.byte.test(value)) throw Error('Expected a base64 string. Received: ' + smart(value));
+    if (!is.byte(value)) throw Error('Expected a base64 string. Received: ' + smart(value));
     return Buffer.from ? Buffer.from(value, 'base64') : new Buffer(value, 'binary');
 };
 
@@ -57,7 +57,7 @@ exports.byte = function(value) {
  * @returns {Date}
  */
 exports.date = function(value) {
-    if (!rx.date.test(value)) throw Error('Expected a date string of the format: YYYY-MM-DD. Received: ' + smart(value));
+    if (!is.date(value)) throw Error('Expected a date string of the format: YYYY-MM-DD. Received: ' + smart(value));
     return new Date(value + 'T00:00:00.000Z');
 };
 
@@ -67,7 +67,7 @@ exports.date = function(value) {
  * @returns {Date}
  */
 exports.dateTime = function(value) {
-    if (!rx.dateTime.test(value)) throw Error('Expected a date-time string of the format: YYYY-MM-DDThh:mm:ss.sss. Received: ' + smart(value));
+    if (!is.dateTime(value)) throw Error('Expected a date-time string of the format: YYYY-MM-DDThh:mm:ss.sss. Received: ' + smart(value));
     return new Date(value);
 };
 exports['date-time'] = exports.dateTime;
@@ -78,7 +78,7 @@ exports['date-time'] = exports.dateTime;
  * @returns {number}
  */
 exports.integer = function(value) {
-    if (!rx.integer.test(value)) throw Error('Cannot convert to integer. The value must be numeric without decimals. Received: ' + smart(value));
+    if (!is.integer(value)) throw Error('Cannot convert to integer. The value must be numeric without decimals. Received: ' + smart(value));
     return +value;
 };
 
@@ -88,6 +88,6 @@ exports.integer = function(value) {
  * @returns {number}
  */
 exports.number = function(value) {
-    if (!rx.number.test(value)) throw Error('Cannot convert to number. The value must be numeric. Received: ' + smart(value));
+    if (!is.number(value)) throw Error('Cannot convert to number. The value must be numeric. Received: ' + smart(value));
     return +value;
 };
