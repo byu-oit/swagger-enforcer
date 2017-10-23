@@ -26,6 +26,13 @@ exports.copy = function(value) {
     return copy(map, value);
 };
 
+/**
+ * Decide whether edges of a string should have slashes or not.
+ * @param {string} value
+ * @param {boolean} start
+ * @param {boolean} end
+ * @returns {string}
+ */
 exports.edgeSlashes = function(value, start, end) {
     value = value.replace(/^\//, '').replace(/\/$/, '');
     if (start) value = '/' + value;
@@ -33,6 +40,12 @@ exports.edgeSlashes = function(value, start, end) {
     return value;
 };
 
+/**
+ * If a property does not exist then set it to the value.
+ * @param {object} obj
+ * @param {string|Symbol} property
+ * @param {*} value
+ */
 exports.propertyDefault = function(obj, property, value) {
     if (!obj.hasOwnProperty(property)) obj[property] = value;
 };
