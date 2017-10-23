@@ -104,7 +104,45 @@ Swagger.prototype.enforce = function(schema, options, initialValue) {
  * @param {object} schema
  * @returns {*}
  */
-Swagger.prototype.format = formatBySchema;
+Swagger.prototype.format = function(value, schema) {
+    const type = util.schemaType(schema);
+    switch (type) {
+        case 'array':
+            if (Array.isArray(value)) return value.map(v => this.format(v, schema.items));
+            break;
+        case 'boolean':
+        case 'integer':
+        case 'number':
+            return format[type](value);
+            break;
+        case 'string':
+            switch (schema.format) {
+                case 'binary':
+                case 'byte':
+                case 'date':
+                case 'date-time':
+                    return format[schema.format](value);
+                    break;
+                default:
+                    return format.string(value);
+            }
+        case 'object':
+            if (value && typeof value === 'object') {
+                const result = {};
+                const additionalProperties = schema.additionalProperties;
+                const properties = schema.properties || {};
+                Object.keys(value).forEach(key => {
+                    if (properties.hasOwnProperty(key)) {
+                        result[key] = this.format(value[key], properties[key]);
+                    } else if (additionalProperties) {
+                        result[key] = this.format(value[key], additionalProperties);
+                    }
+                });
+                return result;
+            }
+            break;
+    }
+};
 
 /**
  * Get details about the matching path.
@@ -330,53 +368,6 @@ Swagger.to = format;
 Swagger.unenforce = function(enforcedValue) {
 
 };
-
-
-/**
- * Format a value for sending as a response.
- * @param {*} value
- * @param {object} schema
- * @returns {*}
- */
-function formatBySchema(value, schema) {
-    const type = util.schemaType(schema);
-    switch (type) {
-        case 'array':
-            if (Array.isArray(value)) return value.map(v => this.format(v, schema.items));
-            break;
-        case 'boolean':
-        case 'integer':
-        case 'number':
-            return format[type](value);
-            break;
-        case 'string':
-            switch (schema.format) {
-                case 'binary':
-                case 'byte':
-                case 'date':
-                case 'date-time':
-                    return format[schema.format](value);
-                    break;
-                default:
-                    return format.string(value);
-            }
-        case 'object':
-            if (value && typeof value === 'object') {
-                const result = {};
-                const additionalProperties = schema.additionalProperties;
-                const properties = schema.properties || {};
-                Object.keys(value).forEach(key => {
-                    if (properties.hasOwnProperty(key)) {
-                        result[key] = this.format(value[key], properties[key]);
-                    } else if (additionalProperties) {
-                        result[key] = this.format(value[key], additionalProperties);
-                    }
-                });
-                return result;
-            }
-            break;
-    }
-}
 
 /**
  * Parse query string into object mapped to array of values.
