@@ -18,30 +18,31 @@
 const format        = require('./format');
 const multipart     = require('./multipart-parser');
 const util          = require('./util');
+const validate      = require('./validate');
 
 module.exports = Swagger;
 
 /**
  * Produce a swagger instance.
- * @param {object} functions The swagger version specific functions and defaults
+ * @param {object} version The swagger version specific functions and defaults
  * @param {object} definition The swagger definition object.
  * @param {object} [defaultOptions]
  * @constructor
  */
-function Swagger(functions, definition, defaultOptions) {
+function Swagger(version, definition, defaultOptions) {
 
     // normalize defaults
     const defaults = Object.assign({}, defaultOptions);
-    defaults.enforce = Object.assign({}, functions.defaults.enforce, defaults.enforce);
-    defaults.populate = Object.assign({}, functions.defaults.populate, defaults.populate);
-    defaults.request = Object.assign({}, functions.defaults.request, defaults.request);
-    defaults.validate = Object.assign({}, functions.defaults.validate, defaults.validate);
+    defaults.enforce = Object.assign({}, version.defaults.enforce, defaults.enforce);
+    defaults.populate = Object.assign({}, version.defaults.populate, defaults.populate);
+    defaults.request = Object.assign({}, version.defaults.request, defaults.request);
+    defaults.validate = Object.assign({}, version.defaults.validate, defaults.validate);
 
     // set some properties
     this.defaults = defaults;
     this.definition = definition;
-    this.functions = functions;
     this.pathParsers = [];
+    this.version = version;
 
     // build path parser functions
     if (!definition.paths || typeof definition.paths !== 'object') definition.paths = {};
@@ -80,11 +81,16 @@ Swagger.prototype.definePath = function(path, definition) {
  * Check a value against a schema for errors.
  * @param {object} schema
  * @param {*} value
- * @param {object} [options={}]
  * @returns {string[]|undefined}
  */
-Swagger.prototype.errors = function(schema, value, options) {
-    options = Object.assign({}, options, this.defaults);
+Swagger.prototype.errors = function(schema, value) {
+    const v = {
+        definition: this.definition,
+        errors: [],
+        options: this.defaults.validate
+    };
+    validate(v, '', schema, value);
+    return v.errors.length > 0 ? v.errors : null;
 };
 
 /**
@@ -343,11 +349,10 @@ Swagger.prototype.schema = function(path, schema) {
  * Check a value against a schema for errors and throw any errors encountered.
  * @param {object} schema
  * @param {*} value
- * @param {object} [options={}]
  * @throws {Error}
  */
-Swagger.prototype.validate = function(schema, value, options) {
-    const errors = this.errors(schema, value, options);
+Swagger.prototype.validate = function(schema, value) {
+    const errors = this.errors(schema, value);
     if (errors) {
         if (errors.length === 1) throw Error(errors[0]);
         throw Error('One or more errors found during swagger validation: \n  ' + errors.map(e => e.message).join('\n  '));

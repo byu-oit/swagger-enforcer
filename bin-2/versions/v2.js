@@ -59,25 +59,42 @@ exports.defaults = {
     },
 
     validate: {
+        boolean: true,
+
         // numbers
+        integer: true,
+        number: true,
         multipleOf: true,
         maximum: true,
         minimum: true,
 
         // strings
+        binary: true,
+        byte: true,
+        date: true,
+        dateExists: true,
+        dateTime: true,
         maxLength: true,
         minLength: true,
         pattern: true,
+        string: true,
+        timeExists: true,
 
         // arrays
+        array: true,
+        items: true,
         maxItems: true,
         minItems: true,
         uniqueItems: true,
 
         // objects
         additionalProperties: true,
+        allOf: true,
+        discriminator: true,
         maxProperties: true,
         minProperties: true,
+        object: true,
+        properties: true,
         required: true,
 
         // general

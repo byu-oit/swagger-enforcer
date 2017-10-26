@@ -2,50 +2,23 @@
 const parser        = require('swagger-parser');
 const Swagger       = require('./bin-2/swagger');
 
-/**
- * Load a swagger enforcer instance for a custom spec.
- * @param {object} functions The custom spec functions.
- * @param {string|object} definition
- * @param {object} [options]
- * @returns {Promise.<Swagger>}
- */
-exports.custom = function(functions, definition, options) {
+module.exports = function(definition, options) {
     return parser.validate(definition)
-        .then(schema => {
-            return new Swagger(functions, schema, options);
+        .then(definition => {
+            const v = definition.swagger || definition.openapi;
+            const match = /^(\d+)/.exec(v);
+            const major = match[1];
+            const version = tryRequire('./bin-2/versions/v' + major);
+            if (!version) throw Error('The swagger definition version is either invalid or not supported: ' + v);
+            return new Swagger(version, definition, options);
         });
 };
 
-/**
- * Load a swagger enforcer instance for spec version 2.0.
- * @param {string|object} definition
- * @param {object} [options]
- * @returns {Promise.<Swagger>}
- */
-exports.v2 = function(definition, options) {
-    const functions = require('./bin-2/versions/v2');
-    return exports.custom(functions, definition, options);
-};
-
-/**
- * Load a swagger enforcer instance for spec version 3.0.0.
- * @param {string|object} definition
- * @param {object} [options]
- * @returns {Promise.<Swagger>}
- */
-exports.v3 = function(definition, options) {
-    throw Error('Swagger v3 not yet implemented');
-    const functions = require('./bin-2/versions/v3');
-    return exports.custom(functions, definition, options);
-};
-
-/*
-const enforcer              = require('./bin/enforcer');
-enforcer.applyTemplate      = require('./bin/apply-template');
-enforcer.injectParameters   = require('./bin/inject-parameters');
-enforcer.is                 = require('./bin/is');
-enforcer.release            = require('./bin/release');
-enforcer.same               = require('./bin/same');
-enforcer.to                 = require('./bin/convert-to');
-
-module.exports = enforcer;*/
+function tryRequire(path) {
+    try {
+        return require(path);
+    } catch (err) {
+        if (err.code === 'MODULE_NOT_FOUND') return null;
+        throw err;
+    }
+}
