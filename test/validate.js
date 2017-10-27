@@ -18,7 +18,7 @@
 const swaggerEnforcer   = require('../index');
 const expect            = require('chai').expect;
 
-describe('validate', () => {
+describe.only('validate', () => {
     const definition = {
         swagger: '2.0',
         info: {
@@ -629,15 +629,13 @@ describe('validate', () => {
             it('first invalid', () => {
                 const errors = validate(schema, { x: true, y: 'hello' });
                 expect(errors.length).to.equal(1);
-                expect(errors[0]).to.match(/allOf\/0\/x/i);
-                expect(errors[0]).to.match(/expected a number/i);
+                expect(errors[0]).to.match(/x: expected a number/i);
             });
 
             it('second invalid', () => {
                 const errors = validate(schema, { x: 2, y: 4 });
                 expect(errors.length).to.equal(1);
-                expect(errors[0]).to.match(/allOf\/1\/y/i);
-                expect(errors[0]).to.match(/expected a string/i);
+                expect(errors[0]).to.match(/y: expected a string/i);
             });
 
         });
@@ -657,29 +655,36 @@ describe('validate', () => {
 
         });
 
-        describe.only('discriminator', () => {
+        describe('discriminator', () => {
 
             it('valid Dog from Pet', () => {
-                const errors = validate(definition.definitions.Pet, { type: 'Dog', packSize: 2 });
+                const errors = validate(definition.definitions.Pet, { animalType: 'Pet', petType: 'Dog', packSize: 2 });
                 expect(errors).to.be.null;
             });
 
             it('invalid Dog from Pet', () => {
-                const errors = validate(definition.definitions.Pet, { type: 'Dog', packSize: 'a' });
-                expect(errors[0]).to.match(/expected a number/);
+                const errors = validate(definition.definitions.Pet, { animalType: 'Pet', petType: 'Dog', packSize: 'a' });
+                expect(errors[0]).to.match(/expected a number/i);
             });
 
             it('undefined discriminator', () => {
-                const errors = validate(definition.definitions.Pet, { type: 'Mouse' });
+                const errors = validate(definition.definitions.Pet, { petType: 'Mouse' });
                 expect(errors[0]).to.match(/Undefined discriminator schema/);
             });
 
-            it('Cat from Pet', () => {
-
+            it('valid Cat from Pet', () => {
+                const errors = validate(definition.definitions.Pet, { animalType: 'Pet', petType: 'Cat', huntingSkill: 'sneak' });
+                expect(errors).to.be.null;
             });
 
-            it('Dog from Animal', () => {
+            it('invalid Cat from Pet', () => {
+                const errors = validate(definition.definitions.Pet, { animalType: 'Pet', petType: 'Cat', huntingSkill: 1 });
+                expect(errors[0]).to.match(/expected a string/i);
+            });
 
+            it('valid Dog from Animal', () => {
+                const errors = validate(definition.definitions.Animal, { animalType: 'Pet', petType: 'Dog', packSize: 2 });
+                expect(errors).to.be.null;
             });
 
         });

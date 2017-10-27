@@ -175,39 +175,11 @@ validate.object = function(v, prefix, schema, value) {
     if (!value || typeof value !== 'object') {
         v.errors.push(prefix + ' Expected a non-null object. Received: ' + smart(value));
     } else {
-
-        // a discriminator rewrites the schema
-        if (v.options.discriminator && schema.discriminator) {
-            const allOf = schema.allOf || [ schema ];
-            const definitions = v.definition.definitions;
-            const key = value[schema.discriminator];
-
-            if (definitions && definitions[key]) {
-                const discriminatedSchema = definitions[key];
-                if (discriminatedSchema.allOf) {
-                    discriminatedSchema.allOf.forEach(schema => {
-                        if (allOf.indexOf(schema) === -1) allOf.push(schema);
-                    });
-                } else {
-                    allOf.push(discriminatedSchema);
-                }
-
-                // rewrite schema
-                schema = {
-                    type: 'object',
-                    allOf: allOf
-                };
-
-            } else {
-                v.errors.push(prefix + ': Undefined discriminator schema: ' + key)
-            }
-        }
-
-
-        if (v.options.allOf && schema.allOf) {
-            schema.allOf.forEach((schema, index) => {
-                validate.object(v, '/allOf/' + index, schema, value);
+        if (v.options.allOf && (schema.allOf || (v.options.discriminator && schema.discriminator))) {
+            discriminate(v, new Map(), [], prefix, schema, value).forEach(schema => {
+                object(v, prefix, schema, value);
             });
+
         } else {
             object(v, prefix, schema, value);
         }
@@ -257,6 +229,36 @@ function date(descriptor, v, prefix, schema, value) {
     }
 
     maxMin(v, prefix, schema, descriptor, 'maximum', 'minimum', false, dt, new Date(schema.maximum), new Date(schema.minimum));
+}
+
+function discriminate(v, map, allOf, prefix, schema, value) {
+
+    // avoid endless loops
+    const exists = map.get(schema);
+    if (exists) return exists;
+    map.set(schema, true);
+
+    if (schema.allOf) {
+        schema.allOf.forEach(schema => {
+            discriminate(v, map, allOf, prefix, schema, value);
+        });
+
+    } else {
+        allOf.push(schema);
+
+        if (schema.discriminator) {
+            const definitions = v.definition.definitions;
+            const key = value[schema.discriminator];
+
+            if (definitions && definitions[key]) {
+                discriminate(v, map, allOf, prefix, definitions[key], value);
+            } else {
+                v.errors.push(prefix + ': Undefined discriminator schema: ' + key)
+            }
+        }
+    }
+
+    return allOf;
 }
 
 function numerical(descriptor, v, prefix, schema, value) {
