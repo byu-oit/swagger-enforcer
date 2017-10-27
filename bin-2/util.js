@@ -103,7 +103,7 @@ exports.same = function same(v1, v2) {
 exports.schemaType = function(schema) {
     if (schema.type) return schema.type;
     if (schema.items) return 'array';
-    if (schema.properties || schema.additionalProperties || schema.allOf) return 'object';
+    if (schema.properties || schema.additionalProperties || schema.allOf || schema.anyOf || schema.oneOf) return 'object';
     return undefined;
 };
 

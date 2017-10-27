@@ -170,12 +170,30 @@ validate.number = function(v, prefix, schema, value) {
     }
 };
 
+// TODO: oneOf and anyOf can use discriminators too
+// TODO: add error messages for missed schemas on oneOf and anyOf
+
 validate.object = function(v, prefix, schema, value) {
     if (!v.options.object) return;
     if (!value || typeof value !== 'object') {
-        v.errors.push(prefix + ' Expected a non-null object. Received: ' + smart(value));
+        v.errors.push(prefix + ': Expected a non-null object. Received: ' + smart(value));
     } else {
-        if (v.options.allOf && (schema.allOf || (v.options.discriminator && schema.discriminator))) {
+        const discriminator = v.options.discriminator && schema.discriminator;
+        const nestedPrefix = ' '.repeat(prefix.length) + '- ';
+        if (v.options.anyOf && schema.anyOf) {
+            const result = anyOneOf(v, nestedPrefix, schema.anyOf, value);
+            if (!result.valid) {
+                v.errors.push(prefix + ': Did not match any of the schemas for the following reasons: \n' + result.errors.join('\n'));
+            }
+
+        } else if (v.options.oneOf && schema.oneOf) {
+            const result = anyOneOf(v, nestedPrefix, schema.oneOf, value);
+            if (result.valid !== -1) {
+                // TODO: how to phrase this error message?
+                v.errors.push(prefix + ': Did not match exactly one schema. Matched: ' + valid);
+            }
+
+        } else if (v.options.allOf && (schema.allOf || discriminator)) {
             discriminate(v, new Map(), [], prefix, schema, value).forEach(schema => {
                 object(v, prefix, schema, value);
             });
@@ -208,6 +226,34 @@ validate.string = function(v, prefix, schema, value) {
 
 
 
+
+function anyOneOf(v, prefix, schemas, value) {
+    // get reference to existing errors and overwrite temporarily
+    const errorsRef = v.errors;
+    let errors = [];
+
+    // iterate through schemas to check validity
+    const length = schemas.length;
+    let valid = 0;
+    for (let i = 0; i < length; i++) {
+        const schema = schemas[i];
+        v.errors = [];
+        validate(v, 'Schema #' + (i + 1) + ': ' + prefix, schema, value);
+        if (!v.errors.length) {
+            valid++;
+        } else {
+            errors = errors.concat(v.errors);
+        }
+    }
+
+    // restore errors
+    v.errors = errorsRef;
+
+    return {
+        errors: errors,
+        valid: valid
+    };
+}
 
 function date(descriptor, v, prefix, schema, value) {
     const suffix = descriptor === 'date-time' ? '' : 'T00:00:00.000Z';

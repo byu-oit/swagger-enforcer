@@ -18,9 +18,10 @@
 const swaggerEnforcer   = require('../index');
 const expect            = require('chai').expect;
 
-describe.only('validate', () => {
+describe('validate', () => {
     const definition = {
         swagger: '2.0',
+        openapi: '3.0.0',
         info: {
             title: 'test',
             version: '1.0.0'
@@ -613,6 +614,21 @@ describe.only('validate', () => {
 
         });
 
+        describe('required', () => {
+            const schema = extend(base, { required: ['name'] });
+
+            it('has required property', () => {
+                const errors = validate(schema, { name: true });
+                expect(errors).to.be.null;
+            });
+
+            it('missing required property', () => {
+                const errors = validate(schema, { age: true });
+                expect(errors[0]).to.match(/required properties missing/);
+            });
+
+        });
+
         describe('allOf', () => {
             const schema = {
                 allOf: [
@@ -640,17 +656,52 @@ describe.only('validate', () => {
 
         });
 
-        describe('required', () => {
-            const schema = extend(base, { required: ['name'] });
+        describe.only('anyOf', () => {
+            const schema = {
+                anyOf: [
+                    { properties: { x: { type: 'number' } } },
+                    { properties: { x: { type: 'boolean' } } },
+                ]
+            };
 
-            it('has required property', () => {
-                const errors = validate(schema, { name: true });
+            it('valid 1', () => {
+                const errors = validate(schema, { x: 5 });
                 expect(errors).to.be.null;
             });
 
-            it('missing required property', () => {
-                const errors = validate(schema, { age: true });
-                expect(errors[0]).to.match(/required properties missing/);
+            it('valid 2', () => {
+                const errors = validate(schema, { x: true });
+                expect(errors).to.be.null;
+            });
+
+            it('invalid', () => {
+                const errors = validate(schema, { x: 'abc' });
+                expect(errors[0]).to.match(/Did not match any schema/i);
+            });
+
+        });
+
+        describe('oneOf', () => {
+            const schema = {
+                anyOf: [
+                    { type: 'number', minimum: 2, maximum: 10 },
+                    { type: 'number', maximum: 5 },
+                ]
+            };
+
+            it('found 0', () => {
+                const errors = validate(schema, 11);
+                expect(errors).to.be.null;
+            });
+
+            it('found 1', () => {
+                const errors = validate(schema, 6);
+                expect(errors).to.be.null;
+            });
+
+            it('found 2', () => {
+                const errors = validate(schema, 3);
+                expect(errors).to.be.null;
             });
 
         });

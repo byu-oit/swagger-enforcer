@@ -3,9 +3,12 @@ const parser        = require('swagger-parser');
 const Swagger       = require('./bin-2/swagger');
 
 module.exports = function(definition, options) {
-    return parser.validate(definition)
+    return parser.dereference(definition)
         .then(definition => {
-            const v = definition.swagger || definition.openapi;
+            return definition.openapi ? definition : parser.validate(definition)
+        })
+        .then(definition => {
+            const v = definition.openapi || definition.swagger;
             const match = /^(\d+)/.exec(v);
             const major = match[1];
             const version = tryRequire('./bin-2/versions/v' + major);
