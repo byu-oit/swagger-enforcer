@@ -16,7 +16,6 @@
  **/
 'use strict';
 const multipart = require('../multipart-parser');
-const util      = require('../util');
 const validate  = require('../validate');
 
 exports.defaults = {
@@ -91,10 +90,13 @@ exports.defaults = {
         // objects
         additionalProperties: true,
         allOf: true,
+        anyOf: true,
         discriminator: true,
         maxProperties: true,
         minProperties: true,
+        not: true,
         object: true,
+        oneOf: true,
         properties: true,
         required: true,
 
@@ -105,7 +107,7 @@ exports.defaults = {
 };
 
 exports.initialize = function(swagger) {
-    swagger.components = {
+    swagger.components = Object.assign({
         callbacks: {},
         examples: {},
         headers: {},
@@ -115,15 +117,7 @@ exports.initialize = function(swagger) {
         responses: {},
         schemas: swagger.definitions || {},
         securitySchemes: {}
-    };
-
-    util.traverse(swagger, function(value, parent, property, path) {
-        if (property === 'discriminator') {
-            parent.discriminator = {
-                propertyName: value
-            };
-        }
-    });
+    }, swagger.components);
 };
 
 exports.request = function(context, request, strPath, store) {
@@ -228,6 +222,8 @@ exports.request = function(context, request, strPath, store) {
 
     return result;
 };
+
+
 
 // parse external input
 function parse(errors, prefix, schema, value) {
