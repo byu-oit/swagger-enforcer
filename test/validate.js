@@ -20,63 +20,66 @@ const expect            = require('chai').expect;
 
 describe('validate', () => {
     const definition = {
-        swagger: '2.0',
         openapi: '3.0.0',
         info: {
             title: 'test',
             version: '1.0.0'
         },
         paths: {},
-        definitions: {
-            Animal: {
-                type: 'object',
-                discriminator: 'animalType',
-                properties: {
-                    classification: { type: 'string' },
-                    hasFur: { type: 'boolean' }
+        components: {
+            schemas: {
+                Animal: {
+                    type: 'object',
+                    discriminator: {
+                        propertyName: 'animalType'
+                    },
+                    properties: {
+                        classification: { type: 'string' },
+                        hasFur: { type: 'boolean' }
+                    },
+                    required: ['animalType']
                 },
-                required: ['animalType']
-            },
-            Pet: {
-                type: 'object',
-                allOf: [
-                    { $ref: '#/definitions/Animal' },
-                    {
-                        type: 'object',
-                        discriminator: 'petType',
-                        properties: {
-                            name: { type: 'string' },
-                            petType: { type: 'string' }
-                        },
-                        required: ['petType']
-                    }
-                ]
-            },
-            Cat: {
-                type: 'object',
-                allOf: [
-                    { $ref: '#/definitions/Pet' },
-                    {
-                        type: 'object',
-                        properties: {
-                            huntingSkill: { type: 'string' }
-                        },
-                        required: ['huntingSkill']
-                    }
-                ]
-            },
-            Dog: {
-                type: 'object',
-                allOf: [
-                    { $ref: '#/definitions/Pet' },
-                    {
-                        type: 'object',
-                        properties: {
-                            packSize: { type: 'number' }
-                        },
-                        required: ['packSize']
-                    }
-                ]
+                Pet: {
+                    type: 'object',
+                    allOf: [
+                        { $ref: '#/components/schemas/Animal' },
+                        {
+                            type: 'object',
+                            discriminator: 'petType',
+                            properties: {
+                                name: { type: 'string' },
+                                petType: { type: 'string' }
+                            },
+                            required: ['petType']
+                        }
+                    ]
+                },
+                Cat: {
+                    type: 'object',
+                    allOf: [
+                        { $ref: '#/components/schemas/Pet' },
+                        {
+                            type: 'object',
+                            properties: {
+                                huntingSkill: { type: 'string' }
+                            },
+                            required: ['huntingSkill']
+                        }
+                    ]
+                },
+                Dog: {
+                    type: 'object',
+                    allOf: [
+                        { $ref: '#/components/schemas/Pet' },
+                        {
+                            type: 'object',
+                            properties: {
+                                packSize: { type: 'number' }
+                            },
+                            required: ['packSize']
+                        }
+                    ]
+                }
             }
         }
     };
@@ -654,9 +657,43 @@ describe('validate', () => {
                 expect(errors[0]).to.match(/y: expected a string/i);
             });
 
+            describe('discriminator', () => {
+
+                it('valid Dog from Pet', () => {
+                    const errors = validate(definition.definitions.Pet, { animalType: 'Pet', petType: 'Dog', packSize: 2 });
+                    expect(errors).to.be.null;
+                });
+
+                it('invalid Dog from Pet', () => {
+                    const errors = validate(definition.definitions.Pet, { animalType: 'Pet', petType: 'Dog', packSize: 'a' });
+                    expect(errors[0]).to.match(/expected a number/i);
+                });
+
+                it('undefined discriminator', () => {
+                    const errors = validate(definition.definitions.Pet, { petType: 'Mouse' });
+                    expect(errors[0]).to.match(/Undefined discriminator schema/);
+                });
+
+                it('valid Cat from Pet', () => {
+                    const errors = validate(definition.definitions.Pet, { animalType: 'Pet', petType: 'Cat', huntingSkill: 'sneak' });
+                    expect(errors).to.be.null;
+                });
+
+                it('invalid Cat from Pet', () => {
+                    const errors = validate(definition.definitions.Pet, { animalType: 'Pet', petType: 'Cat', huntingSkill: 1 });
+                    expect(errors[0]).to.match(/expected a string/i);
+                });
+
+                it('valid Dog from Animal', () => {
+                    const errors = validate(definition.definitions.Animal, { animalType: 'Pet', petType: 'Dog', packSize: 2 });
+                    expect(errors).to.be.null;
+                });
+
+            });
+
         });
 
-        describe.only('anyOf', () => {
+        describe('anyOf', () => {
             const schema = {
                 anyOf: [
                     { properties: { x: { type: 'number' } } },
@@ -676,66 +713,32 @@ describe('validate', () => {
 
             it('invalid', () => {
                 const errors = validate(schema, { x: 'abc' });
-                expect(errors[0]).to.match(/Did not match any schema/i);
+                expect(errors[0]).to.match(/Did not match any/i);
             });
 
         });
 
         describe('oneOf', () => {
             const schema = {
-                anyOf: [
-                    { type: 'number', minimum: 2, maximum: 10 },
-                    { type: 'number', maximum: 5 },
+                oneOf: [
+                    { type: 'object', properties: { x: { type: 'number', minimum: 2, maximum: 10 } }},
+                    { type: 'object', properties: { x: { type: 'number', maximum: 5 } }},
                 ]
             };
 
             it('found 0', () => {
-                const errors = validate(schema, 11);
-                expect(errors).to.be.null;
+                const errors = validate(schema, { x: 11 });
+                expect(errors[0]).to.match(/Did not match exactly one/i);
             });
 
             it('found 1', () => {
-                const errors = validate(schema, 6);
+                const errors = validate(schema, { x: 6 });
                 expect(errors).to.be.null;
             });
 
             it('found 2', () => {
-                const errors = validate(schema, 3);
-                expect(errors).to.be.null;
-            });
-
-        });
-
-        describe('discriminator', () => {
-
-            it('valid Dog from Pet', () => {
-                const errors = validate(definition.definitions.Pet, { animalType: 'Pet', petType: 'Dog', packSize: 2 });
-                expect(errors).to.be.null;
-            });
-
-            it('invalid Dog from Pet', () => {
-                const errors = validate(definition.definitions.Pet, { animalType: 'Pet', petType: 'Dog', packSize: 'a' });
-                expect(errors[0]).to.match(/expected a number/i);
-            });
-
-            it('undefined discriminator', () => {
-                const errors = validate(definition.definitions.Pet, { petType: 'Mouse' });
-                expect(errors[0]).to.match(/Undefined discriminator schema/);
-            });
-
-            it('valid Cat from Pet', () => {
-                const errors = validate(definition.definitions.Pet, { animalType: 'Pet', petType: 'Cat', huntingSkill: 'sneak' });
-                expect(errors).to.be.null;
-            });
-
-            it('invalid Cat from Pet', () => {
-                const errors = validate(definition.definitions.Pet, { animalType: 'Pet', petType: 'Cat', huntingSkill: 1 });
-                expect(errors[0]).to.match(/expected a string/i);
-            });
-
-            it('valid Dog from Animal', () => {
-                const errors = validate(definition.definitions.Animal, { animalType: 'Pet', petType: 'Dog', packSize: 2 });
-                expect(errors).to.be.null;
+                const errors = validate(schema, { x: 3 });
+                expect(errors[0]).to.match(/Did not match exactly one/i);
             });
 
         });

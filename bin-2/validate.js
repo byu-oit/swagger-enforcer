@@ -20,6 +20,7 @@ const rx        = require('./rx');
 const util      = require('./util');
 
 const smart = util.smart;
+const rxPrefixSpaces = /^ */;
 
 module.exports = validate;
 
@@ -179,18 +180,18 @@ validate.object = function(v, prefix, schema, value) {
         v.errors.push(prefix + ': Expected a non-null object. Received: ' + smart(value));
     } else {
         const discriminator = v.options.discriminator && schema.discriminator;
-        const nestedPrefix = ' '.repeat(prefix.length) + '- ';
+        const indentLength = rxPrefixSpaces.exec(prefix)[0].length;
+        const nestedPrefix = ' '.repeat(indentLength + 2);
         if (v.options.anyOf && schema.anyOf) {
             const result = anyOneOf(v, nestedPrefix, schema.anyOf, value);
             if (!result.valid) {
-                v.errors.push(prefix + ': Did not match any of the schemas for the following reasons: \n' + result.errors.join('\n'));
+                v.errors.push(prefix + ': Did not match any of the schemas:\n' + result.errors.join('\n'));
             }
 
         } else if (v.options.oneOf && schema.oneOf) {
             const result = anyOneOf(v, nestedPrefix, schema.oneOf, value);
-            if (result.valid !== -1) {
-                // TODO: how to phrase this error message?
-                v.errors.push(prefix + ': Did not match exactly one schema. Matched: ' + valid);
+            if (result.valid !== 1) {
+                v.errors.push(prefix + ': Did not match exactly one schema. Matched: ' + result.valid + '\n' + result.messages.join('\n'));
             }
 
         } else if (v.options.allOf && (schema.allOf || discriminator)) {
@@ -230,7 +231,8 @@ validate.string = function(v, prefix, schema, value) {
 function anyOneOf(v, prefix, schemas, value) {
     // get reference to existing errors and overwrite temporarily
     const errorsRef = v.errors;
-    let errors = [];
+    const messages = [];
+    const errors = [];
 
     // iterate through schemas to check validity
     const length = schemas.length;
@@ -238,11 +240,14 @@ function anyOneOf(v, prefix, schemas, value) {
     for (let i = 0; i < length; i++) {
         const schema = schemas[i];
         v.errors = [];
-        validate(v, 'Schema #' + (i + 1) + ': ' + prefix, schema, value);
+        validate(v, prefix + '  ', schema, value);
         if (!v.errors.length) {
             valid++;
+            messages.push(prefix + 'Schema #' + (i + 1) + ': Valid');
         } else {
-            errors = errors.concat(v.errors);
+            const logStr = prefix + 'Schema #' + (i + 1) + ': Invalid\n' + v.errors.join('\n');
+            messages.push(logStr);
+            errors.push(logStr);
         }
     }
 
@@ -251,6 +256,7 @@ function anyOneOf(v, prefix, schemas, value) {
 
     return {
         errors: errors,
+        messages: messages,
         valid: valid
     };
 }
@@ -292,12 +298,15 @@ function discriminate(v, map, allOf, prefix, schema, value) {
     } else {
         allOf.push(schema);
 
-        if (schema.discriminator) {
-            const definitions = v.definition.definitions;
-            const key = value[schema.discriminator];
+        const discriminator = schema.discriminator;
+        if (discriminator) {
+            const schemas = v.definition.components.schemas;
+            const key = value[discriminator.propertyName];
 
-            if (definitions && definitions[key]) {
-                discriminate(v, map, allOf, prefix, definitions[key], value);
+            if (discriminator.mapping && discriminator.mapping[key]) {
+                discriminate(v, map, allOf, prefix, discriminator.mapping[key], value);
+            } else if (schemas[key]) {
+                discriminate(v, map, allOf, prefix, schemas[key], value);
             } else {
                 v.errors.push(prefix + ': Undefined discriminator schema: ' + key)
             }
