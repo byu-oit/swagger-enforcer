@@ -117,6 +117,10 @@ exports.smart = function(value) {
     return value;
 };
 
+exports.traverse = function(object, callback) {
+    const map = new Map();
+    traverse(map, '', null, null, object, callback);
+};
 
 function copy(map, value) {
     if (value instanceof Date) {
@@ -145,5 +149,22 @@ function copy(map, value) {
 
     } else {
         return value;
+    }
+}
+
+function traverse(map, path, property, parent, value, callback) {
+    // avoid endless loop
+    if (map.has(value)) return;
+    map.set(value, true);
+
+    callback(value, parent, property, path);
+
+    if (Array.isArray(value)) {
+        value.forEach((v, i) => traverse(map, path + '/' + i, i, value, v, callback));
+
+    } else if (value && typeof value === 'object') {
+        Object.keys(value).forEach(key => {
+            traverse(map, path + '/' + key, key, value, value[key], callback)
+        });
     }
 }
