@@ -17,6 +17,7 @@
 'use strict';
 const format        = require('./format');
 const multipart     = require('./multipart-parser');
+const populate      = require('./populate');
 const util          = require('./util');
 const validate      = require('./validate');
 
@@ -87,7 +88,8 @@ Swagger.prototype.errors = function(schema, value) {
     const v = {
         definition: this.definition,
         errors: [],
-        options: this.defaults.validate
+        options: this.defaults.validate,
+        schemas: this.definition.components.schemas
     };
     validate(v, '<root>', schema, value);
     return v.errors.length > 0 ? v.errors : null;
@@ -180,9 +182,27 @@ Swagger.prototype.path = function(path, subPath) {
  * @param {object} schema
  * @param {object} map
  * @param {*} [initialValue]
+ * @param {object} [options]
  */
-Swagger.prototype.populate = function(schema, map, initialValue) {
+Swagger.prototype.populate = function(schema, map, initialValue, options) {
+    const v = {
+        definition: this.definition,
+        errors: [],
+        injector: populate.injector,
+        map: map,
+        options: Object.assign({}, this.defaults.populate, options),
+        schemas: this.definition.components.schemas
+    };
 
+    // get schema type and validate
+    const type = util.schemaType(schema);
+    if (type !== 'array' && type !== 'object') throw Error('Can only populate objects or arrays. Provided schema type: ' + type);
+
+    // if initial value is not set then set it
+    if (arguments.length < 3) initialValue = type === 'array' ? [] : {};
+
+    // begin population
+    return populate.populate(v, schema, map, initialValue);
 };
 
 /**
@@ -355,7 +375,7 @@ Swagger.prototype.validate = function(schema, value) {
     const errors = this.errors(schema, value);
     if (errors) {
         if (errors.length === 1) throw Error(errors[0]);
-        throw Error('One or more errors found during swagger validation: \n  ' + errors.map(e => e.message).join('\n  '));
+        throw Error('One or more errors found during schema validation: \n  ' + errors.map(e => e.message).join('\n  '));
     }
 };
 
