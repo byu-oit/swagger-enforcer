@@ -89,7 +89,7 @@ Swagger.prototype.errors = function(schema, value) {
         errors: [],
         options: this.defaults.validate
     };
-    validate(v, '', schema, value);
+    validate(v, '<root>', schema, value);
     return v.errors.length > 0 ? v.errors : null;
 };
 
@@ -302,7 +302,7 @@ Swagger.prototype.request = function(request) {
         });
     }
 
-    return this.functions.request(req);
+    return this.version.request(req);
 };
 
 /**
