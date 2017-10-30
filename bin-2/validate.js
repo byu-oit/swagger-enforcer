@@ -300,7 +300,7 @@ function discriminate(v, map, allOf, prefix, schema, value) {
 
         const discriminator = schema.discriminator;
         if (discriminator) {
-            const schemas = v.definition.components.schemas;
+            const schemas = v.schemas;
             const key = value[discriminator.propertyName];
 
             if (discriminator.mapping && discriminator.mapping[key]) {
