@@ -48,6 +48,7 @@ exports.defaults = {
     },
 
     populate: {
+        allOf: true,
         autoFormat: false,      // setting this value to true may hide some errors as values are auto formatted to their correct type
         copy: false,            // mode can be either copy or mutate. Mutate is faster but copy preserves the original object
         defaults: true,
