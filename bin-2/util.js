@@ -108,6 +108,18 @@ exports.schemaType = function(schema) {
 };
 
 /**
+ * Determine the schema format using the schema. It isn't always specified but enough
+ * information is generally provided to determine it.
+ * @param {object} schema
+ * @returns {string}
+ */
+exports.schemaFormat = function(schema) {
+    const type = exports.schemaType(schema);
+    if (type === 'string') return schema.format || 'string';
+    return type;
+};
+
+/**
  * Wrap with quotations in the value is a string.
  * @param value
  * @returns {*}
