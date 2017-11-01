@@ -3,6 +3,12 @@ const parser        = require('json-schema-ref-parser');
 const Swagger       = require('./bin-2/swagger');
 const validator     = require('swagger-parser');
 
+/**
+ * Get a promise for a swagger enforcer object.
+ * @param {string,object} definition
+ * @param {object} [options]
+ * @returns {Promise.<Swagger>}
+ */
 module.exports = function(definition, options) {
     return parser.dereference(definition)
         .then(definition => {
