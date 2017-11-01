@@ -15,6 +15,7 @@
  *    limitations under the License.
  **/
 'use strict';
+const format        = require('./format');
 const util          = require('./util');
 
 exports.injector = {
@@ -23,127 +24,112 @@ exports.injector = {
     handlebar: buildInjector(() => /{([_$a-z][_$a-z0-9]*)}/ig)
 };
 
-exports.populate = function(v, schema, map, value) {
+exports.populate = function(v, prefix, schema, map, object, property) {
+    const options = v.options;
     const type = util.schemaType(schema);
 
-    // if a discriminator exists then get its parent's allOf
-    if (!schema.allOf && schema.discriminator && value.hasOwnProperty(schema.discriminator)) {
-        const second = v.schemas[value[schema.discriminator]];
-        const allOf = (Array.isArray(second.allOf) ? second.allOf : [ second ])
-            .filter(s => s !== schema);
-
-        const schemaCopy = Object.assign({}, schema);
-        delete schemaCopy.discriminator;
-        allOf.push(schemaCopy);
-
-        schema = {
-            type: 'object',
-            allOf: allOf
-        };
-    }
-
-    // if allOf then apply each item
-    if (Array.isArray(schema.allOf)) {
-        const applications = [{}];
-        schema.allOf.forEach(schema => {
-            const data = exports.populate(v, schema, map, value);
-            if (data.applied) applications.push(data.value);
-        });
-        return {
-            applied: applications.length > 2,
-            value: Object.assign.apply(Object, applications)
-        };
-    }
-
-    // is an array
     if (type === 'array') {
-        if (!Array.isArray(value) || !schema.items) return {
-            applied: false,
-            value: value
-        };
-        let setDefault = false;
-        const result = value.map(item => {
-            const data = exports.populate(v, schema.items, map, item);
-            if (data.applied) setDefault = true;
-            return data.value;
+        if (!Array.isArray(object[property])) throw Error(prefix + ': Provided value must be an array. Received: ' + util.smart(value));
+
+        apply(v, schema, map, object, property);
+
+        const value = object[property];
+        value.forEach((item, index) => {
+            exports.populate(v, prefix + '/' + index, schema.items, map, value, index)
         });
-        return {
-            applied: setDefault,
-            value: setDefault ? result : value
-        };
 
-    }
+    } else if (type === 'object') {
+        const value = object[property];
+        if (!value || typeof value !== 'object') throw Error(prefix + ': Provided value must be a non-null object. Received: ' + util.smart(value));
 
-    // is an object
-    if (type === 'object') {
+        // if allOf then apply each item
+        if (options.allOf && schema.allOf) {
+            schema.allOf.forEach(schema => exports.populate(v, prefix, schema, map, object, property));
 
-        // if the value was provided but is not an object then return the value as provided
-        if ((!value || typeof value !== 'object')) return {
-            applied: false,
-            value: value
-        };
+        // if any of then apply anything it can
+        } else if (options.anyOf && schema.anyOf) {
+            // TODO: do I need to limit this to anyOf schema's that pass?
+            schema.anyOf.forEach(schema => exports.populate(v, prefix, schema, map, object, property));
 
-        working here
+        // populate oneOf as described by the discriminator
+        } else if (options.oneOf && schema.oneOf && schema.discriminator && value.hasOwnProperty(schema.discriminator.propertyName)) {
+            const discriminator = schema.discriminator;
+            const key = value[discriminator.propertyName];
+            if (discriminator.mapping && discriminator.mapping[key]) {
+                exports.populate(v, prefix, discriminator.mapping[key], map, object, property);
+            }
 
-        // build a new object based on the provided object
-        const result = valueNotProvided ? {} : Object.assign({}, value);
-        const properties = schema.properties || {};
-        const requires = schema.required || [];
-        let setDefault = false;
+        } else {
+            apply(v, schema, map, object, property);
+            const value = object[property];
 
-        Object.keys(properties)
-            .forEach(property => {
-                const subSchema = schema.properties[property];
+            // if not ignoring required then these values may not actually populate
+            const required = options.ignoreMissingRequired ? null : schema.required || [];
+            const target = required ? Object.assign({}, value) : value;
 
-                //if (subSchema.required) requires.push(property);
-                if ((options.useTemplates && subSchema.hasOwnProperty('x-template')) ||
-                    (options.useVariables && subSchema.hasOwnProperty('x-variable')) ||
-                    (options.useDefaults && subSchema.hasOwnProperty('default')) ||
-                    getSchemaType(subSchema) === 'object') {
+            // populate for additional properties
+            const additionalProperties = schema.additionalProperties;
+            if (additionalProperties) {
+                const properties = schema.properties || {};
+                Object.keys(target).forEach(key => {
 
-                    const data = result.hasOwnProperty(property)
-                        ? applyTemplate(subSchema, definitions, params, options, result[property])
-                        : applyTemplate(subSchema, definitions, params, options);
-                    if (data.applied) {
-                        result[property] = data.value;
-                        setDefault = true;
+                    // if enforcing required then remove this property from the remaining required list
+                    if (required) {
+                        const index = required.indexOf(key);
+                        if (index !== -1) required.splice(index, 1);
                     }
-                }
-            });
 
-        // apply additional properties defaults
-        if (schema.additionalProperties) {
-            Object.keys(result)
-                .forEach(property => {
-                    if (!properties.hasOwnProperty(property)) {
-                        const data = applyTemplate(schema.additionalProperties, definitions, params, options, result[property]);
-                        if (data.applied) {
-                            result[property] = data.value;
-                            setDefault = true;
-                        }
+                    // populate the property
+                    if (!properties.hasOwnProperty(key)) {
+                        exports.populate(v, prefix + '/' + key, additionalProperties, map, target, key);
                     }
                 });
-        }
-
-        // if missing a required then don't send back defaults (which may have caused the required error)
-        if (!options.ignoreMissingRequired) {
-            const requiresLength = requires.length;
-            for (let i = 0; i < requiresLength; i++) {
-                if (!result.hasOwnProperty(requires[i])) {
-                    setDefault = false;
-                    break;
-                }
             }
-        }
 
-        return {
-            applied: setDefault,
-            value: setDefault ? result : value
-        };
+            // populate for known properties
+            const properties = schema.properties;
+            if (properties) {
+                Object.keys(properties).forEach(key => {
+                    exports.populate(v, prefix + '/' + key, properties[key], map, target, key);
+                });
+            }
+
+            // if enforcing required and it was fulfilled then update the object's property with the target
+            // if not enforcing required then the object's property is already the target
+            if (required && !required.length) object[property] = target;
+
+        }
+    } else {
+        apply(v, schema, map, object, property);
     }
+
 
 };
 
+
+function apply(v, schema, map, object, property) {
+    if (object[property] === undefined) {
+        const options = v.options;
+        if (options.variables && schema.hasOwnProperty('x-variable') && map.hasOwnProperty(schema['x-variable'])) {
+            const value = map[schema['x-variable']];
+            if (options.autoFormat) {
+                const type = util.schemaFormat(schema);
+                object[property] = format[type](value);
+            } else {
+                object[property] = value;
+            }
+
+        } else if (options.templates && schema.hasOwnProperty('x-template')) {
+            object[property] = v.injector(schema['x-template'], map);
+
+        } else if (options.defaults && schema.hasOwnProperty('default')) {
+            const value = schema.default;
+            object[property] = options.defaultsUseParams && typeof value === 'string'
+                ? v.injector(value, map)
+                : value;
+        }
+    }
+}
 
 /**
  * Accepts a function that returns a regular expression. Uses the regular expression to extract parameter names from strings.
@@ -163,65 +149,4 @@ function buildInjector(rxGenerator) {
         }
         return result + value.substr(offset);
     };
-}
-
-function injectMutate(value, parameters, replacement) {
-    const valueType = typeof value;
-
-    if (Array.isArray(value)) {
-        value.forEach((item, index) => {
-            if (typeof item === 'string') {
-                const v = replacement(item, parameters);
-                if (v !== item) value[index] = v;
-            } else {
-                injectMutate(item, parameters, replacement);
-            }
-        });
-        return value;
-
-    } else if (value && valueType === 'object') {
-        const keys = Object.keys(value);
-        const length = keys.length;
-        for (let i = 0; i < length; i++) {
-            const key = keys[i];
-            const item = value[key];
-            if (typeof item === 'string') {
-                const v = replacement(item, parameters);
-                if (v !== item) value[key] = v;
-            } else {
-                injectMutate(item, parameters, replacement);
-            }
-        }
-        return value;
-
-    } else if (valueType === 'string') {
-        return replacement(value, parameters);
-
-    } else {
-        return value;
-    }
-}
-
-function injectCopy(value, parameters, replacement) {
-    const valueType = typeof value;
-
-    if (Array.isArray(value)) {
-        return value.map(item => injectCopy(item, parameters, replacement));
-
-    } else if (value && valueType === 'object') {
-        const result = {};
-        const keys = Object.keys(value);
-        const length = keys.length;
-        for (let i = 0; i < length; i++) {
-            const key = keys[i];
-            result[key] = injectCopy(value[key], parameters, replacement);
-        }
-        return result;
-
-    } else if (valueType === 'string') {
-        return replacement(value, parameters);
-
-    } else {
-        return value;
-    }
 }
