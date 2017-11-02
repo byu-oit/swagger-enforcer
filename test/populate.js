@@ -15,7 +15,7 @@
  *    limitations under the License.
  **/
 'use strict';
-const swaggerEnforcer   = require('../index');
+const SwaggerEnforcer   = require('../index');
 const expect            = require('chai').expect;
 
 describe('populate', () => {
@@ -32,7 +32,7 @@ describe('populate', () => {
     let enforcer;
 
     before(() => {
-        return swaggerEnforcer(definition).then(x => enforcer = x);
+        enforcer = new SwaggerEnforcer(definition);
     });
 
     describe('integer', () => {
@@ -62,15 +62,17 @@ describe('populate', () => {
             expect(value).to.equal(5);
         });
 
-        it('autoformat enabled', () => {
+        it('auto format enabled', () => {
+            const enforcer = new SwaggerEnforcer(definition, { populate: { autoFormat: true } });
             const date = new Date();
-            const value = enforcer.populate({ type: 'number', 'x-variable': 'myNumber' }, { myNumber: date }, { autoFormat: true });
+            const value = enforcer.populate({ type: 'number', 'x-variable': 'myNumber' }, { myNumber: date });
             expect(value).to.equal(+date);
         });
 
-        it('autoformat disabled', () => {
+        it('auto format disabled', () => {
+            const enforcer = new SwaggerEnforcer(definition, { populate: { autoFormat: false } });
             const date = new Date();
-            const value = enforcer.populate({ type: 'number', 'x-variable': 'myNumber' }, { myNumber: date }, { autoFormat: false });
+            const value = enforcer.populate({ type: 'number', 'x-variable': 'myNumber' }, { myNumber: date });
             expect(value).to.equal(date);
         });
 
@@ -104,7 +106,7 @@ describe('populate', () => {
 
         it('array of numbers', () => {
             const schema = { type: 'array', items: { type: 'number', default: 5 }};
-            const value = enforcer.populate(schema, {}, {}, [1, 2, undefined, 3, 4, undefined]);
+            const value = enforcer.populate(schema, {}, [1, 2, undefined, 3, 4, undefined]);
             expect(value).to.deep.equal([1, 2, 5, 3, 4, 5]);
         });
 
@@ -146,6 +148,7 @@ describe('populate', () => {
         });
 
         it('don\'t ignore missing requires', () => {
+            const enforcer = new SwaggerEnforcer(definition, { populate: { ignoreMissingRequired: false } });
             const schema = {
                 required: ['name'],
                 properties: {
@@ -153,7 +156,7 @@ describe('populate', () => {
                     age: { type: 'number', default: 5 }
                 }
             };
-            const value = enforcer.populate(schema, {}, { ignoreMissingRequired: false });
+            const value = enforcer.populate(schema, {});
             expect(value).to.be.undefined;
         });
 
@@ -166,7 +169,7 @@ describe('populate', () => {
                     }
                 }
             };
-            const value = enforcer.populate(schema, {}, {}, { a: {} });
+            const value = enforcer.populate(schema, {}, { a: {} });
             expect(value).to.deep.equal({ a: { x: 5 } });
         });
 
@@ -197,7 +200,7 @@ describe('populate', () => {
             };
 
             it('does nothing', () => {
-                const value = enforcer.populate(schema, {}, {});
+                const value = enforcer.populate(schema, {});
                 expect(value).to.be.undefined;
             });
         });
@@ -227,12 +230,12 @@ describe('populate', () => {
             };
 
             it('one', () => {
-                const value = enforcer.populate(schema, {}, {}, { mode: 'one' });
+                const value = enforcer.populate(schema, {}, { mode: 'one' });
                 expect(value).to.deep.equal({ mode: 'one', value: 5 });
             });
 
             it('two', () => {
-                const value = enforcer.populate(schema, {}, {}, { mode: 'two' });
+                const value = enforcer.populate(schema, {}, { mode: 'two' });
                 expect(value).to.deep.equal({ mode: 'two', value: 'hello' });
             });
 

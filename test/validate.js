@@ -15,7 +15,7 @@
  *    limitations under the License.
  **/
 'use strict';
-const swaggerEnforcer   = require('../index');
+const SwaggerEnforcer   = require('../index');
 const expect            = require('chai').expect;
 
 describe('validate', () => {
@@ -35,12 +35,10 @@ describe('validate', () => {
     let validate;
 
     before(() => {
-        return swaggerEnforcer(definition)
-            .then(enforcer => {
-                validate = function(schema, value) {
-                    return enforcer.errors(schema, value);
-                };
-            });
+        const enforcer = new SwaggerEnforcer(definition);
+        validate = function(schema, value) {
+            return enforcer.errors(schema, value);
+        };
     });
 
     describe('array', () => {
@@ -729,12 +727,10 @@ describe('validate', () => {
         };
 
         before(() => {
-            return swaggerEnforcer(definition)
-                .then(enforcer => {
-                    validate = function(schema, value) {
-                        return enforcer.errors(schema, value);
-                    };
-                });
+            const enforcer = SwaggerEnforcer(definition);
+            validate = function(schema, value) {
+                return enforcer.errors(schema, value);
+            };
         });
 
         describe('object discriminator', () => {

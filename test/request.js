@@ -18,7 +18,7 @@
 const expect        = require('chai').expect;
 const Swagger       = require('../bin-2/swagger');
 
-describe.only('request', () => {
+describe('request', () => {
 
     describe('pre-processor', () => {
         let request;
@@ -112,7 +112,7 @@ describe.only('request', () => {
                 expect(() => request({ header: { accept: 123 } })).to.throw(/Invalid request header specified/);
             });
 
-            it.only('invalid header', () => {
+            it('invalid header', () => {
                 expect(() => request({ header: null })).to.throw(/Invalid request header specified/);
             });
 
