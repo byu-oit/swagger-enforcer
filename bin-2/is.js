@@ -17,16 +17,25 @@
 'use strict';
 const rx        = require('./rx');
 
-exports.byte = v => rx.byte.test(v) && v.length % 4 === 0;
+exports.byte = v => typeof v === 'string' && rx.byte.test(v) && v.length % 4 === 0;
 
-exports.binary = v => rx.binary.test(v);
+exports.binary = v => typeof v === 'string' && rx.binary.test(v);
 
-exports.boolean = v => rx.boolean.test(v);
+exports.boolean = (value, strict) => {
+    if (strict && typeof value !== 'boolean') return false;
+    return v => rx.boolean.test(value);
+};
 
-exports.date = v => rx.date.test(v);
+exports.date = v => typeof v === 'string' && rx.date.test(v);
 
-exports.dateTime = v => rx.dateTime.test(v);
+exports.dateTime = v => typeof v === 'string' && rx.dateTime.test(v);
 
-exports.integer = v => rx.integer.test(v);
+exports.integer = (value, strict) => {
+    if (strict && (typeof value !== 'number' || isNaN(value))) return false;
+    return rx.integer.test(value);
+};
 
-exports.number = v => rx.number.test(v);
+exports.number = (value, strict) => {
+    if (strict && (typeof value !== 'number' || isNaN(value))) return false;
+    return rx.number.test(value);
+};
