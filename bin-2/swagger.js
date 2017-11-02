@@ -180,7 +180,7 @@ Swagger.prototype.path = function(path, subPath) {
 /**
  * Populate an object or an array using default, x-template, x-variable, and a parameter map.
  * @param {object} schema
- * @param {object} map
+ * @param {object} [map]
  * @param {object} [options]
  * @param {*} [initialValue]
  */
@@ -191,29 +191,22 @@ Swagger.prototype.populate = function(schema, map, options, initialValue) {
     // initialize variables
     const initialValueProvided = arguments.length > 3;
     const v = {
-        errors: [],
         injector: populate.injector[options.replacement],
-        map: map,
+        map: map || {},
         options: options,
         schemas: this.definition.components.schemas
     };
 
-    // get schema type and validate
-    const type = util.schemaType(schema);
-    if (type !== 'array' && type !== 'object') throw Error('Can only populate objects or arrays. Provided schema type: ' + type);
-
-    // validate initialValue and type
-    if (initialValueProvided && (!initialValue || typeof initialValue !== 'object' || (type === 'array' && Array.isArray(initialValue)))) {
-        throw Error('Provided initial value must be a' + (type === 'array' ? 'n array' : ' non-null object'));
-    }
-
     // produce start value
     const value = v.options.copy && initialValueProvided
         ? util.copy(initialValue)
-        : ('array' ? [] : {});
+        : initialValue;//('array' ? [] : {});
 
     // begin population
-    return populate.populate(v, '<root>', schema, map, { root: value }, 'root');
+    const root = { root: value };
+    populate.populate(v, '<root>', schema, root, 'root');
+
+    return root.root;
 };
 
 /**
