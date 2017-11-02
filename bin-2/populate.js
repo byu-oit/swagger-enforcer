@@ -98,7 +98,7 @@ exports.populate = function(v, prefix, schema, object, property) {
 
             // if enforcing required and it was fulfilled then update the object's property with the target
             // if not enforcing required then the object's property is already the target
-            if (!required || !required.length || (value === undefined && !Object.keys(target).length)) {
+            if ((value !== undefined || Object.keys(target).length) && (!required || !required.length)) {
                 object[property] = target;
             }
 
