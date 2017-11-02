@@ -150,6 +150,15 @@ exports.traverse = function(object, callback) {
     traverse(map, '', null, null, object, callback);
 };
 
+exports.tryRequire = function(path) {
+    try {
+        return require(path);
+    } catch (err) {
+        if (err.code === 'MODULE_NOT_FOUND') return null;
+        throw err;
+    }
+};
+
 function copy(map, value) {
     if (value instanceof Date) {
         return new Date(+value);
