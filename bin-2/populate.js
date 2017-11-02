@@ -24,48 +24,55 @@ exports.injector = {
     handlebar: buildInjector(() => /{([_$a-z][_$a-z0-9]*)}/ig)
 };
 
-exports.populate = function(v, prefix, schema, map, object, property) {
+exports.populate = function(v, prefix, schema, object, property) {
     const options = v.options;
     const type = util.schemaType(schema);
 
     if (type === 'array') {
-        if (!Array.isArray(object[property])) throw Error(prefix + ': Provided value must be an array. Received: ' + util.smart(value));
+        let value = object[property];
+        if (value !== undefined && !Array.isArray(object[property])) {
+            throw Error(prefix + ': Provided value must be an array. Received: ' + util.smart(value));
+        }
 
-        apply(v, schema, map, object, property);
+        apply(v, schema, type, object, property);
 
-        const value = object[property];
-        value.forEach((item, index) => {
-            exports.populate(v, prefix + '/' + index, schema.items, map, value, index)
-        });
+        value = object[property];
+        if (value) {
+            value.forEach((item, index) => {
+                exports.populate(v, prefix + '/' + index, schema.items, value, index)
+            });
+        }
 
     } else if (type === 'object') {
         const value = object[property];
-        if (!value || typeof value !== 'object') throw Error(prefix + ': Provided value must be a non-null object. Received: ' + util.smart(value));
+        if (value !== undefined && (!value || typeof value !== 'object')) {
+            throw Error(prefix + ': Provided value must be a non-null object. Received: ' + util.smart(value));
+        }
 
         // if allOf then apply each item
         if (options.allOf && schema.allOf) {
-            schema.allOf.forEach(schema => exports.populate(v, prefix, schema, map, object, property));
+            schema.allOf.forEach(schema => exports.populate(v, prefix, schema, object, property));
 
         // if any of then apply anything it can
         } else if (options.anyOf && schema.anyOf) {
-            // TODO: do I need to limit this to anyOf schema's that pass?
-            schema.anyOf.forEach(schema => exports.populate(v, prefix, schema, map, object, property));
+            // any of cannot work because one may populate data that is invalid for another
+            // instead, use the specific anyOf schema (not schemas) that you wish to apply
 
         // populate oneOf as described by the discriminator
         } else if (options.oneOf && schema.oneOf && schema.discriminator && value.hasOwnProperty(schema.discriminator.propertyName)) {
             const discriminator = schema.discriminator;
             const key = value[discriminator.propertyName];
             if (discriminator.mapping && discriminator.mapping[key]) {
-                exports.populate(v, prefix, discriminator.mapping[key], map, object, property);
+                exports.populate(v, prefix, discriminator.mapping[key], object, property);
             }
 
         } else {
-            apply(v, schema, map, object, property);
+            apply(v, schema, type, object, property);
             const value = object[property];
 
             // if not ignoring required then these values may not actually populate
             const required = options.ignoreMissingRequired ? null : schema.required || [];
-            const target = required ? Object.assign({}, value) : value;
+            const target = required ? Object.assign({}, value) : value || {};
 
             // populate for additional properties
             const additionalProperties = schema.additionalProperties;
@@ -81,7 +88,7 @@ exports.populate = function(v, prefix, schema, map, object, property) {
 
                     // populate the property
                     if (!properties.hasOwnProperty(key)) {
-                        exports.populate(v, prefix + '/' + key, additionalProperties, map, target, key);
+                        exports.populate(v, prefix + '/' + key, additionalProperties, target, key);
                     }
                 });
             }
@@ -90,36 +97,39 @@ exports.populate = function(v, prefix, schema, map, object, property) {
             const properties = schema.properties;
             if (properties) {
                 Object.keys(properties).forEach(key => {
-                    exports.populate(v, prefix + '/' + key, properties[key], map, target, key);
+                    exports.populate(v, prefix + '/' + key, properties[key], target, key);
                 });
             }
 
             // if enforcing required and it was fulfilled then update the object's property with the target
             // if not enforcing required then the object's property is already the target
-            if (required && !required.length) object[property] = target;
+            if (!required || !required.length || (value === undefined && !Object.keys(target).length)) {
+                object[property] = target;
+            }
 
         }
     } else {
-        apply(v, schema, map, object, property);
+        apply(v, schema, type, object, property);
     }
 
 
 };
 
 
-function apply(v, schema, map, object, property) {
+function apply(v, schema, type, object, property) {
     if (object[property] === undefined) {
         const options = v.options;
+        const map = v.map;
         if (options.variables && schema.hasOwnProperty('x-variable') && map.hasOwnProperty(schema['x-variable'])) {
             const value = map[schema['x-variable']];
             if (options.autoFormat) {
-                const type = util.schemaFormat(schema);
-                object[property] = format[type](value);
+                const form = util.schemaFormat(schema);
+                object[property] = format[form](value);
             } else {
                 object[property] = value;
             }
 
-        } else if (options.templates && schema.hasOwnProperty('x-template')) {
+        } else if (options.templates && type === 'string' && schema.hasOwnProperty('x-template')) {
             object[property] = v.injector(schema['x-template'], map);
 
         } else if (options.defaults && schema.hasOwnProperty('default')) {
