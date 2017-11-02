@@ -35,6 +35,7 @@ exports.copy = function(value) {
  */
 exports.edgeSlashes = function(value, start, end) {
     value = value.replace(/^\//, '').replace(/\/$/, '');
+    if (value.length === 0 && (start || end)) return '/';
     if (start) value = '/' + value;
     if (end) value += '/';
     return value;
