@@ -98,7 +98,7 @@ exports.same = function same(v1, v2) {
  * Determine the schema type using the schema. It isn't always specified but enough
  * information is generally provided to determine it.
  * @param {object} schema
- * @returns {string}
+ * @returns {string, undefined}
  */
 exports.schemaType = function(schema) {
     if (schema.type) return schema.type;
@@ -111,12 +111,28 @@ exports.schemaType = function(schema) {
  * Determine the schema format using the schema. It isn't always specified but enough
  * information is generally provided to determine it.
  * @param {object} schema
- * @returns {string}
+ * @returns {string, undefined}
  */
 exports.schemaFormat = function(schema) {
     const type = exports.schemaType(schema);
-    if (type === 'string') return schema.format || 'string';
-    return type;
+    switch (type) {
+        case 'boolean':
+        case 'integer':
+        case 'number':
+            return type;
+        case 'string':
+            switch (schema.format) {
+                case 'binary':
+                case 'byte':
+                case 'date':
+                case 'date-time':
+                    return schema.format;
+                default:
+                    return 'string';
+            }
+        default:
+            return;
+    }
 };
 
 /**
