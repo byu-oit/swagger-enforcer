@@ -1,6 +1,41 @@
 [![Build Status](https://travis-ci.org/byu-oit/swagger-enforcer.svg?branch=master)](https://travis-ci.org/byu-oit/swagger-enforcer)
 [![Coverage Status](https://coveralls.io/repos/github/byu-oit/swagger-enforcer/badge.svg?branch=master)](https://coveralls.io/github/byu-oit/swagger-enforcer?branch=master)
 
+```js
+const SwaggerEnforcer   = require('swagger-enforcer');
+
+const parser        = require('json-schema-ref-parser');    // for parsing json ref
+const validator     = require('swagger-parser');            // for validating swagger 2.0
+
+module.exports = function(definition, options) {
+    return parser.dereference(definition)
+        .then(definition => {
+            return definition.openapi
+                ? definition                    // skip validation for 3.0.0 until supported
+                : validator.validate(definition);
+        })
+        .then(definition => {
+            const v = definition.openapi || definition.swagger;
+            const match = /^(\d+)/.exec(v);
+            const major = match[1];
+            const version = tryRequire('./bin-2/versions/v' + major);
+            if (!version) throw Error('The swagger definition version is either invalid or not supported: ' + v);
+            version.initialize(definition);
+            return new Swagger(version, definition, options);
+        });
+};
+
+function tryRequire(path) {
+    try {
+        return require(path);
+    } catch (err) {
+        if (err.code === 'MODULE_NOT_FOUND') return null;
+        throw err;
+    }
+}
+```
+
+
 # Swagger-Enforcer
 
 Automatically validate a value against the swagger schema while you build it. Alternatively you can validate the final value.
