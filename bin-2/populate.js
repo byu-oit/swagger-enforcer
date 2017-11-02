@@ -53,11 +53,6 @@ exports.populate = function(v, prefix, schema, object, property) {
         if (options.allOf && schema.allOf) {
             schema.allOf.forEach(schema => exports.populate(v, prefix, schema, object, property));
 
-        // if any of then apply anything it can
-        } else if (options.anyOf && schema.anyOf) {
-            // any of cannot work because one may populate data that is invalid for another
-            // instead, use the specific anyOf schema (not schemas) that you wish to apply
-
         // populate oneOf as described by the discriminator
         } else if (options.oneOf && schema.oneOf && schema.discriminator && value.hasOwnProperty(schema.discriminator.propertyName)) {
             const discriminator = schema.discriminator;
