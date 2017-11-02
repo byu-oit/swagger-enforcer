@@ -21,62 +21,85 @@ const populate      = require('./populate');
 const util          = require('./util');
 const validate      = require('./validate');
 
-module.exports = Swagger;
+module.exports = SwaggerEnforcer;
+
+const store = new WeakMap();
 
 /**
  * Produce a swagger instance.
- * @param {object} version The swagger version specific functions and defaults
- * @param {object} definition The swagger definition object.
+ * @param {object, string} definition The swagger definition object or a string representing the version to use.
  * @param {object} [defaultOptions]
  * @constructor
  */
-function Swagger(version, definition, defaultOptions) {
+function SwaggerEnforcer(definition, defaultOptions) {
+
+    // make sure that this is called as a new instance
+    if (!(this instanceof SwaggerEnforcer)) return new SwaggerEnforcer(definition, defaultOptions);
+
+    // if the definition was passed in as a version number then rebuild the definition object
+    const def = definition;
+    if (typeof def === 'string') {
+        definition = {};
+        if (def === '2.0') {
+            definition.swagger = '2.0';
+        } else if (/^3\.\d+\.\d+$/.test(def)) {
+            definition.openapi = def;
+        }
+    }
+
+    // get the version number from the definition
+    const v = definition.openapi || definition.swagger;
+    const match = /^(\d+)/.exec(v);
+    if (!match) throw Error('Unsupported swagger version specified: ' + v);
+
+    // attempt to load the version specific settings and functions
+    const major = match[1];
+    const version = util.tryRequire('./versions/v' + major);
+    if (!version) throw Error('The swagger definition version is either invalid or not supported: ' + v);
+    version.initialize(util.copy(definition));
 
     // normalize defaults
     const defaults = Object.assign({}, defaultOptions);
-    defaults.enforce = Object.assign({}, version.defaults.enforce, defaults.enforce);
-    defaults.populate = Object.assign({}, version.defaults.populate, defaults.populate);
-    defaults.request = Object.assign({}, version.defaults.request, defaults.request);
-    defaults.validate = Object.assign({}, version.defaults.validate, defaults.validate);
-
-    // set some properties
-    this.defaults = defaults;
-    this.definition = definition;
-    this.pathParsers = [];
-    this.version = version;
+    Object.keys(version.defaults)
+        .forEach(category => {
+            defaults[category] = Object.assign({}, version.defaults[category], defaults[category]);
+        });
 
     // build path parser functions
+    const pathParsers = [];
     if (!definition.paths || typeof definition.paths !== 'object') definition.paths = {};
-    Object.keys(definition.paths).forEach(path => this.definePath(path, definition.paths[path]));
-}
+    Object.keys(definition.paths)
+        .forEach(path => {
+            const edgedPath = util.edgeSlashes(path, true, true);
+            const rx = new RegExp('^' + edgedPath.replace(/\/{[\s\S]+?}\//g, '\/([^\\/]+?)\/') + '$');
 
-/**
- * Define a new path.
- * @param {string} path
- * @param {object} definition
- */
-Swagger.prototype.definePath = function(path, definition) {
-    const edgedPath = util.edgeSlashes(path, true, true);
-    const rx = new RegExp('^' + edgedPath.replace(/\/{[\s\S]+?}\//g, '\/([^\\/]+?)\/') + '$');
+            const names = [];
+            const namesRx = /\/{([\s\S]+?)}\//g;
+            let match;
+            while (match = namesRx.exec(edgedPath)) names.push(match[1]);
 
-    const names = [];
-    const namesRx = /\/{([\s\S]+?)}\//g;
-    let match;
-    while (match = namesRx.exec(edgedPath)) names.push(match[1]);
+            pathParsers.push({
+                definition: definition.paths[path],
+                path: path,
+                parse: function(str) {
+                    const match = rx.exec(str);
+                    if (!match) return undefined;
 
-    this.pathParsers.push({
+                    const params = {};
+                    names.forEach((name, index) => params[name] = match[index + 1]);
+                    return params;
+                }
+            });
+        });
+
+    // store protected properties
+    store.set(this, {
+        defaults: defaults,
         definition: definition,
-        path: path,
-        parse: function(str) {
-            const match = rx.exec(str);
-            if (!match) return undefined;
-
-            const params = {};
-            names.forEach((name, index) => params[name] = match[index + 1]);
-            return params;
-        }
+        pathParsers: pathParsers,
+        version: version
     });
-};
+}
 
 /**
  * Check a value against a schema for errors.
@@ -84,12 +107,13 @@ Swagger.prototype.definePath = function(path, definition) {
  * @param {*} value
  * @returns {string[]|undefined}
  */
-Swagger.prototype.errors = function(schema, value) {
+SwaggerEnforcer.prototype.errors = function(schema, value) {
+    const data = store.get(this);
     const v = {
-        definition: this.definition,
+        definition: data.definition,
         errors: [],
-        options: this.defaults.validate,
-        schemas: this.definition.components.schemas
+        options: data.defaults.validate,
+        schemas: data.definition.components.schemas
     };
     validate(v, '<root>', schema, value);
     return v.errors.length > 0 ? v.errors : null;
@@ -102,7 +126,7 @@ Swagger.prototype.errors = function(schema, value) {
  * @param {*} [initialValue] The initial value to build the enforced object from.
  * @returns {object|array}
  */
-Swagger.prototype.enforce = function(schema, options, initialValue) {
+SwaggerEnforcer.prototype.enforce = function(schema, options, initialValue) {
 
 };
 
@@ -112,7 +136,7 @@ Swagger.prototype.enforce = function(schema, options, initialValue) {
  * @param {object} schema
  * @returns {*}
  */
-Swagger.prototype.format = function(value, schema) {
+SwaggerEnforcer.prototype.format = function(value, schema) {
     const type = util.schemaType(schema);
     switch (type) {
         case 'array':
@@ -158,8 +182,8 @@ Swagger.prototype.format = function(value, schema) {
  * @param {string} [subPath]
  * @returns {{path: string, params: Object.<string, *>, schema: object}|undefined}
  */
-Swagger.prototype.path = function(path, subPath) {
-    const parsers = this.pathParsers;
+SwaggerEnforcer.prototype.path = function(path, subPath) {
+    const parsers = store.get(this).pathParsers;
 
     // normalize path
     if (!path) path = '';
@@ -181,20 +205,19 @@ Swagger.prototype.path = function(path, subPath) {
  * Populate an object or an array using default, x-template, x-variable, and a parameter map.
  * @param {object} schema
  * @param {object} [map]
- * @param {object} [options]
  * @param {*} [initialValue]
  */
-Swagger.prototype.populate = function(schema, map, options, initialValue) {
-    // normalize options
-    options = Object.assign({}, this.defaults.populate, options);
+SwaggerEnforcer.prototype.populate = function(schema, map, initialValue) {
+    const data = store.get(this);
+    const options = data.defaults.populate;
 
     // initialize variables
     const initialValueProvided = arguments.length > 3;
     const v = {
         injector: populate.injector[options.replacement],
         map: map || {},
-        options: options,
-        schemas: this.definition.components.schemas
+        options: data.defaults.populate,
+        schemas: data.definition.components.schemas
     };
 
     // produce start value
@@ -218,7 +241,7 @@ Swagger.prototype.populate = function(schema, map, options, initialValue) {
  * @param {string} [request.path=''] The request path. The path can contain the query parameters.
  * @param {string|Object.<string,string|undefined|Array.<string|undefined>>} [request.query={}] The request query. If the path also has the query defined then this query will overwrite the path query parameters.
  */
-Swagger.prototype.request = function(request) {
+SwaggerEnforcer.prototype.request = function(request) {
     let type;
     let hasError;
 
@@ -326,17 +349,17 @@ Swagger.prototype.request = function(request) {
         });
     }
 
-    return this.version.request(req);
+    return store.get(this).version.request(req);
 };
 
 /**
  * Get a copy of the schema at the specified path.
  * @param {string} [path=''] The path in the schema to get a sub-schema from. Supports variable substitution for path parameters.
- * @param {object} [schema] The schema to traverse. Defaults to the entire swagger document.
+ * @param {object} [schema] The schema to traverse. Defaults to the entire SwaggerEnforcer document.
  * @returns {object|undefined} Will return undefined if the specified path is invalid.
  */
-Swagger.prototype.schema = function(path, schema) {
-    let result = schema || this.definition;
+SwaggerEnforcer.prototype.schema = function(path, schema) {
+    let result = schema || store.get(this).definition;
 
     // normalize path
     if (!path) path = '';
@@ -375,7 +398,7 @@ Swagger.prototype.schema = function(path, schema) {
  * @param {*} value
  * @throws {Error}
  */
-Swagger.prototype.validate = function(schema, value) {
+SwaggerEnforcer.prototype.validate = function(schema, value) {
     const errors = this.errors(schema, value);
     if (errors) {
         if (errors.length === 1) throw Error(errors[0]);
@@ -383,16 +406,15 @@ Swagger.prototype.validate = function(schema, value) {
     }
 };
 
-Swagger.is = require('./is');
 
-Swagger.to = format;
+SwaggerEnforcer.is = require('./is');
 
 /**
  * Take an enforced array or object and create an unenforced copy.
  * @param {object|array} enforcedValue
  * @returns {object|array}
  */
-Swagger.unenforce = function(enforcedValue) {
+SwaggerEnforcer.unenforce = function(enforcedValue) {
 
 };
 
