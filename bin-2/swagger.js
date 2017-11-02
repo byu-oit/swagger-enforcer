@@ -37,14 +37,10 @@ function SwaggerEnforcer(definition, defaultOptions) {
     if (!(this instanceof SwaggerEnforcer)) return new SwaggerEnforcer(definition, defaultOptions);
 
     // if the definition was passed in as a version number then rebuild the definition object
-    const def = definition;
-    if (typeof def === 'string') {
-        definition = {};
-        if (def === '2.0') {
-            definition.swagger = '2.0';
-        } else if (/^3\.\d+\.\d+$/.test(def)) {
-            definition.openapi = def;
-        }
+    if (definition === '2.0') {
+        definition = { swagger: '2.0' };
+    } else if (/^3\.\d+\.\d+$/.test(definition)) {
+        definition = { openapi: definition };
     }
 
     // get the version number from the definition
@@ -56,7 +52,10 @@ function SwaggerEnforcer(definition, defaultOptions) {
     const major = match[1];
     const version = util.tryRequire('./versions/v' + major);
     if (!version) throw Error('The swagger definition version is either invalid or not supported: ' + v);
-    version.initialize(util.copy(definition));
+
+    // initialize the definition
+    definition = util.copy(definition);
+    version.initialize(definition);
 
     // normalize defaults
     const defaults = Object.assign({}, defaultOptions);
