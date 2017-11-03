@@ -50,18 +50,15 @@ function SwaggerEnforcer(definition, defaultOptions) {
 
     // attempt to load the version specific settings and functions
     const major = match[1];
-    const version = util.tryRequire('./versions/v' + major);
-    if (!version) throw Error('The swagger definition version is either invalid or not supported: ' + v);
-
-    // initialize the definition
-    definition = util.copy(definition);
-    version.initialize(definition);
+    const Version = util.tryRequire('./versions/v' + major);
+    if (!Version) throw Error('The swagger definition version is either invalid or not supported: ' + v);
+    const version = new Version(definition);
 
     // normalize defaults
     const defaults = Object.assign({}, defaultOptions);
-    Object.keys(version.defaults)
+    Object.keys(Version.defaults)
         .forEach(category => {
-            defaults[category] = Object.assign({}, version.defaults[category], defaults[category]);
+            defaults[category] = Object.assign({}, Version.defaults[category], defaults[category]);
         });
 
     // build path parser functions
@@ -108,11 +105,12 @@ function SwaggerEnforcer(definition, defaultOptions) {
  */
 SwaggerEnforcer.prototype.errors = function(schema, value) {
     const data = store.get(this);
+    const version = data.version;
     const v = {
         definition: data.definition,
         errors: [],
         options: data.defaults.validate,
-        schemas: data.definition.components.schemas
+        version: version
     };
     validate(v, '<root>', schema, value);
     return v.errors.length > 0 ? v.errors : null;
@@ -212,11 +210,13 @@ SwaggerEnforcer.prototype.populate = function(schema, map, initialValue) {
 
     // initialize variables
     const initialValueProvided = arguments.length > 3;
+    const version = data.version;
     const v = {
         injector: populate.injector[options.replacement],
         map: map || {},
         options: data.defaults.populate,
-        schemas: data.definition.components.schemas
+        schemas: version.schemas,
+        version: version
     };
 
     // produce start value
@@ -254,6 +254,8 @@ SwaggerEnforcer.prototype.request = function(request) {
     if (typeof req.path !== 'string') throw Error('Invalid request path specified. Expected a string. Received: ' + util.smart(req.path));
     const pathComponents = req.path.split('?');
     req.path = '/' + pathComponents[0].replace(/^\//, '').replace(/\/$/, '');
+
+    this.path(req.path);
 
     // normalize and validate header
     type = typeof req.header;
@@ -348,7 +350,9 @@ SwaggerEnforcer.prototype.request = function(request) {
         });
     }
 
-    return store.get(this).version.request(req);
+    //return store.get(this).version.request(req);
+
+    return req;
 };
 
 /**

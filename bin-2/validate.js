@@ -298,16 +298,12 @@ function discriminate(v, map, allOf, prefix, schema, value) {
     } else {
         allOf.push(schema);
 
-        const discriminator = schema.discriminator;
-        if (discriminator) {
-            const schemas = v.schemas;
-            const key = value[discriminator.propertyName];
-
-            if (discriminator.mapping && discriminator.mapping[key]) {
-                discriminate(v, map, allOf, prefix, discriminator.mapping[key], value);
-            } else if (schemas[key]) {
-                discriminate(v, map, allOf, prefix, schemas[key], value);
+        if (schema.discriminator) {
+            const discriminator = v.version.getDiscriminatorSchema(schema, value);
+            if (discriminator) {
+                discriminate(v, map, allOf, prefix, discriminator, value);
             } else {
+                const key = v.version.getDiscriminatorKey(schema, value);
                 v.errors.push(prefix + ': Undefined discriminator schema: ' + key)
             }
         }

@@ -19,7 +19,33 @@ const multipart = require('../multipart-parser');
 const util      = require('../util');
 const validate  = require('../validate');
 
-exports.defaults = {
+module.exports = Version;
+
+function Version(definition) {
+    this.definition = definition;
+
+    this.callbacks = {};
+    this.examples = {};
+    this.headers = {};
+    this.links = {};
+    this.parameters = definition.parameters || {};
+    this.requestBodies = {};
+    this.responses = definition.responses || {};
+    this.schemas = definition.definitions || {};
+    this.securitySchemes = definition.securityDefinitions || {};
+}
+
+Version.prototype.getDiscriminatorKey = function(schema, value) {
+    const discriminator = schema.discriminator;
+    if (discriminator && value.hasOwnProperty(discriminator)) return value[discriminator];
+};
+
+Version.prototype.getDiscriminatorSchema = function(schema, value) {
+    const key = this.getDiscriminatorKey(schema, value);
+    if (key) return this.definition.definitions[key];
+};
+
+Version.defaults = {
 
     enforce: {
         // numbers
@@ -109,27 +135,7 @@ exports.defaults = {
 
 };
 
-exports.initialize = function(swagger) {
-    swagger.components = {
-        callbacks: {},
-        examples: {},
-        headers: {},
-        links: {},
-        parameters: {},
-        requestBodies: {},
-        responses: {},
-        schemas: swagger.definitions || {},
-        securitySchemes: {}
-    };
 
-    util.traverse(swagger, function(value, parent, property, path) {
-        if (property === 'discriminator') {
-            parent.discriminator = {
-                propertyName: value
-            };
-        }
-    });
-};
 
 exports.request = function(context, request, strPath, store) {
     const errors = [];

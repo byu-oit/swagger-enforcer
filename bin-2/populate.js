@@ -54,12 +54,9 @@ exports.populate = function(v, prefix, schema, object, property) {
             schema.allOf.forEach(schema => exports.populate(v, prefix, schema, object, property));
 
         // populate oneOf as described by the discriminator
-        } else if (options.oneOf && schema.oneOf && schema.discriminator && value.hasOwnProperty(schema.discriminator.propertyName)) {
-            const discriminator = schema.discriminator;
-            const key = value[discriminator.propertyName];
-            if (discriminator.mapping && discriminator.mapping[key]) {
-                exports.populate(v, prefix, discriminator.mapping[key], object, property);
-            }
+        } else if (options.oneOf && schema.oneOf && schema.discriminator) {
+            const discriminator = v.version.getDiscriminatorSchema(schema, value);
+            if (discriminator) exports.populate(v, prefix, discriminator, object, property);
 
         } else {
             apply(v, schema, type, object, property);

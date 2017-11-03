@@ -18,7 +18,42 @@
 const multipart = require('../multipart-parser');
 const validate  = require('../validate');
 
-exports.defaults = {
+module.exports = Version;
+
+function Version(definition) {
+    this.definition = definition;
+
+    const components = definition.components || {};
+    this.callbacks = components.callback || {};
+    this.examples = components.examples || {};
+    this.headers = components.headers || {};
+    this.links = components.links || {};
+    this.parameters = components.parameters || {};
+    this.requestBodies = components.requestBodies || {};
+    this.responses = components.responses || {};
+    this.schemas = components.schemas || {};
+    this.securitySchemes = components.securitySchemes || {};
+}
+
+Version.prototype.getDiscriminatorKey = function(schema, value) {
+    const discriminator = schema.discriminator;
+    if (discriminator && value.hasOwnProperty(discriminator.propertyName)) return value[discriminator.propertyName];
+};
+
+Version.prototype.getDiscriminatorSchema = function(schema, value) {
+    const key = this.getDiscriminatorKey(schema, value);
+    if (key) {
+        const discriminator = schema.discriminator;
+        const mapping = discriminator.mapping;
+        if (mapping && mapping[key]) return mapping[key];
+
+        const schemas = this.definition.components.schemas;
+        if (schemas && schemas[key]) return schemas[key];
+    }
+};
+
+
+Version.defaults = {
 
     enforce: {
         // numbers
@@ -110,6 +145,18 @@ exports.defaults = {
         enum: true
     }
 
+};
+
+exports.getDiscriminatorSchema = function(definition, schema, value) {
+    const discriminator = schema.discriminator;
+    if (discriminator && value.hasOwnProperty(discriminator.propertyName)) {
+        const key = value[discriminator.propertyName];
+        const mapping = discriminator.mapping;
+        if (mapping && mapping[key]) return mapping[key];
+
+        const schemas = definition.components.schemas;
+        if (schemas && schemas[key]) return schemas[key];
+    }
 };
 
 exports.initialize = function(swagger) {
