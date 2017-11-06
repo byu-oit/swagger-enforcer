@@ -46,7 +46,7 @@ function SwaggerEnforcer(definition, defaultOptions) {
 
     // get the version number from the definition
     const v = definition.openapi || definition.swagger;
-    const match = /^(\d+)/.exec(v);
+    const match = /^(\d+)(?:\.(\d+))?(?:\.(\d+))?/.exec(v);
     if (!match) throw Error('Unsupported swagger version specified: ' + v);
 
     // attempt to load the version specific settings and functions
