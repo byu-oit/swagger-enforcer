@@ -32,10 +32,11 @@ describe('validate', () => {
         }
     };
 
+    let enforcer;
     let validate;
 
     before(() => {
-        const enforcer = new SwaggerEnforcer(definition);
+        enforcer = new SwaggerEnforcer(definition);
         validate = function(schema, value) {
             return enforcer.errors(schema, value);
         };
@@ -710,6 +711,29 @@ describe('validate', () => {
             });
 
         });
+
+    });
+
+    describe('multiple errors', () => {
+        const base = { type: 'number', minimum: 10, multipleOf: 5 };
+
+        it('error', () => {
+            const errors = enforcer.errors(base, 8);
+            expect(errors.length).to.equal(2);
+            expect(errors[0]).to.match(/greater than or equal/);
+            expect(errors[1]).to.match(/multiple of/);
+        });
+
+        it('validate', () => {
+            const err = Error('Not this one');
+            try {
+                enforcer.validate(base, 8);
+                throw err;
+            } catch (e) {
+                expect(e.message).to.match(/one or more errors/i);
+            }
+        });
+
 
     });
 
