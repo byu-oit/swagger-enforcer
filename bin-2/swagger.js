@@ -416,7 +416,7 @@ SwaggerEnforcer.prototype.validate = function(schema, value) {
     const errors = this.errors(schema, value);
     if (errors) {
         if (errors.length === 1) throw Error(errors[0]);
-        throw Error('One or more errors found during schema validation: \n  ' + errors.map(e => e.message).join('\n  '));
+        throw Error('One or more errors found during schema validation: \n  ' + errors.join('\n  '));
     }
 };
 
