@@ -15,8 +15,8 @@
  *    limitations under the License.
  **/
 'use strict';
-const expect        = require('chai').expect;
-const Swagger       = require('../bin-2/swagger');
+const expect            = require('chai').expect;
+const SwaggerEnforcer   = require('../index');
 
 describe('request', () => {
 
@@ -24,9 +24,8 @@ describe('request', () => {
         let request;
 
         before(() => {
-            const functions = { defaults: {}, request: r => r };
-            const swagger = new Swagger(functions, {});
-            request = swagger.request.bind(swagger);
+            const enforcer = new SwaggerEnforcer('3.0.0');
+            request = enforcer.request.bind(enforcer);
         });
 
         it('invalid parameter throws error', () => {

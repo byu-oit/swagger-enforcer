@@ -120,4 +120,67 @@ describe('path', () => {
 
     });
 
+    describe('parameter paths', () => {
+        let swagger;
+
+        const pathSchema = {
+            responses: { '200': {} }
+        };
+        const def = {
+            swagger: '2.0',
+            paths: {
+                '/static/path': pathSchema,
+                '/{path}': pathSchema,
+                '/param/{path}': pathSchema,
+                '/param/{path}/value': pathSchema,
+                '/param/{path}/value/{x}': pathSchema
+            }
+        };
+
+        before(() => {
+            swagger = new SwaggerEnforcer(def);
+        });
+
+        it('start with param', () => {
+            expect(swagger.path('/abc')).to.deep.equal({
+                params: { path: 'abc' },
+                path: '/{path}',
+                schema: pathSchema
+            });
+        });
+
+        it('last param', () => {
+            expect(swagger.path('/param/abc')).to.deep.equal({
+                params: { path: 'abc' },
+                path: '/param/{path}',
+                schema: pathSchema
+            });
+        });
+
+        it('middle param', () => {
+            expect(swagger.path('/param/abc/value')).to.deep.equal({
+                params: { path: 'abc' },
+                path: '/param/{path}/value',
+                schema: pathSchema
+            });
+        });
+
+        it('multiple parameters', () => {
+            expect(swagger.path('/param/abc/value/123')).to.deep.equal({
+                params: { path: 'abc', x: '123' },
+                path: '/param/{path}/value/{x}',
+                schema: pathSchema
+            });
+        });
+
+        it('sub pathing', () => {
+            expect(swagger.path('/param/abc/value/123', 'responses/200')).to.deep.equal({
+                params: { path: 'abc', x: '123' },
+                path: '/param/{path}/value/{x}',
+                schema: pathSchema.responses['200']
+            });
+        });
+
+    });
+
 });
