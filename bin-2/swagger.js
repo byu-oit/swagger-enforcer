@@ -24,6 +24,7 @@ const validate      = require('./validate');
 module.exports = SwaggerEnforcer;
 
 const store = new WeakMap();
+const rxPathParam = /{([\s\S]+?)}/;
 
 /**
  * Produce a swagger instance.
@@ -66,18 +67,28 @@ function SwaggerEnforcer(definition, defaultOptions) {
     if (!definition.paths || typeof definition.paths !== 'object') definition.paths = {};
     Object.keys(definition.paths)
         .forEach(path => {
-            const edgedPath = util.edgeSlashes(path, true, true);
-            const rx = new RegExp('^' + edgedPath.replace(/\/{[\s\S]+?}\//g, '\/([^\\/]+?)\/') + '$');
-
             const names = [];
-            const namesRx = /\/{([\s\S]+?)}\//g;
-            let match;
-            while (match = namesRx.exec(edgedPath)) names.push(match[1]);
+            const rx = new RegExp('^/' +
+                util.edgeSlashes(path, false, false)
+                    .split('/')
+                    .map(partial => {
+                        const match = rxPathParam.exec(partial);
+                        if (match) {
+                            names.push(match[1]);
+                            return '([^\\/]+?)'
+                        } else {
+                            return partial;
+                        }
+                    })
+                    .join('/') +
+                '$');
 
             pathParsers.push({
                 definition: definition.paths[path],
                 path: path,
                 parse: function(str) {
+                    str = util.edgeSlashes(str, true, false);
+
                     const match = rx.exec(str);
                     if (!match) return undefined;
 
@@ -193,7 +204,7 @@ SwaggerEnforcer.prototype.path = function(path, subPath) {
         if (params) return {
             params: params,
             path: parser.path,
-            schema: subPath ? this.schema(subPath, parser.schema) : util.copy(parser.schema)
+            schema: subPath ? this.schema(subPath, parser.definition) : util.copy(parser.definition)
         };
     }
 };
