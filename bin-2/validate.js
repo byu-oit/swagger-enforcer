@@ -351,8 +351,12 @@ function object(v, prefix, schema, value) {
         if (properties.hasOwnProperty(key)) {
             if (v.options.properties) validate(v, prefix + '/' + key, properties[key], value[key]);
 
-        } else if (v.options.additionalProperties && schema.additionalProperties) {
-            validate(v, '/' + prefix + '/' + key, schema.additionalProperties, value[key]);
+        } else if (v.options.additionalProperties) {
+            if (schema.additionalProperties === false) {
+                v.errors.push(prefix + ': Additional properties are not allowed.');
+            } else if (typeof schema.additionalProperties === 'object') {
+                validate(v, '/' + prefix + '/' + key, schema.additionalProperties, value[key]);
+            }
         }
     });
 
