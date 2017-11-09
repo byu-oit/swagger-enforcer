@@ -91,6 +91,8 @@ Version.defaults = {
     },
 
     validate: {
+        depth: -1,              // validate to full depth
+
         boolean: true,
 
         // numbers
