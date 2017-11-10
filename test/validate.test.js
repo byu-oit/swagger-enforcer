@@ -645,18 +645,18 @@ describe('validate', () => {
         describe('anyOf', () => {
             const schema = {
                 anyOf: [
-                    { properties: { x: { type: 'number' } } },
-                    { properties: { x: { type: 'boolean' } } },
+                    { type: 'number' },
+                    { type: 'boolean' },
                 ]
             };
 
             it('valid 1', () => {
-                const errors = validate(schema, { x: 5 });
+                const errors = validate(schema, 5);
                 expect(errors).to.be.null;
             });
 
             it('valid 2', () => {
-                const errors = validate(schema, { x: true });
+                const errors = validate(schema, true);
                 expect(errors).to.be.null;
             });
 
@@ -799,61 +799,68 @@ function extend(base, extra) {
 }
 
 function createSchemas(version) {
-    const prefix = version === 2 ? '#/definitions/' : '#/components/schemas/';
+    const Animal = {
+        type: 'object',
+        discriminator: version === 2
+            ? 'animalType'
+            : { propertyName: 'animalType' },
+        properties: {
+            classification: { type: 'string' },
+            hasFur: { type: 'boolean' }
+        },
+        required: ['animalType']
+    };
+
+    const Pet = {
+        type: 'object',
+        allOf: [
+            Animal,
+            {
+                type: 'object',
+                discriminator: version === 2
+                    ? 'petType'
+                    : { propertyName: 'petType' },
+                properties: {
+                    name: { type: 'string' },
+                    petType: { type: 'string' }
+                },
+                required: ['petType']
+            }
+        ]
+    };
+
+    const Cat = {
+        type: 'object',
+        allOf: [
+            Pet,
+            {
+                type: 'object',
+                properties: {
+                    huntingSkill: { type: 'string' }
+                },
+                required: ['huntingSkill']
+            }
+        ]
+    };
+
+    const Dog = {
+        type: 'object',
+        allOf: [
+            Pet,
+            {
+                type: 'object',
+                properties: {
+                    packSize: { type: 'number' }
+                },
+                required: ['packSize']
+            }
+        ]
+    };
+
     return {
-        Animal: {
-            type: 'object',
-            discriminator: version === 2
-                ? 'animalType'
-                : { propertyName: 'animalType' },
-            properties: {
-                classification: { type: 'string' },
-                hasFur: { type: 'boolean' }
-            },
-            required: ['animalType']
-        },
-        Pet: {
-            type: 'object',
-            allOf: [
-                { $ref: prefix + 'Animal' },
-                {
-                    type: 'object',
-                    discriminator: version === 2
-                        ? 'petType'
-                        : { propertyName: 'petType' },
-                    properties: {
-                        name: { type: 'string' },
-                        petType: { type: 'string' }
-                    },
-                    required: ['petType']
-                }
-            ]
-        },
-        Cat: {
-            type: 'object',
-            allOf: [
-                { $ref: prefix + 'Pet' },
-                {
-                    type: 'object',
-                    properties: {
-                        huntingSkill: { type: 'string' }
-                    },
-                    required: ['huntingSkill']
-                }
-            ]
-        },
-        Dog: {
-            type: 'object',
-            allOf: [
-                { $ref: prefix + 'Pet' },
-                {
-                    type: 'object',
-                    properties: {
-                        packSize: { type: 'number' }
-                    },
-                    required: ['packSize']
-                }
-            ]
-        }
+        Animal: Animal,
+        Pet: Pet,
+        Cat: Cat,
+        Dog: Dog
     };
 }

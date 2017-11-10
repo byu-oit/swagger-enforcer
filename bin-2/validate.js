@@ -24,36 +24,63 @@ const rxPrefixSpaces = /^ */;
 
 module.exports = validate;
 
-function validate(v, prefix, schema, value) {
-    const type = util.schemaType(schema);
-    switch (type) {
-        case 'array':
-            validate.array(v, prefix, schema, value);
-            break;
-        case 'boolean':
-        case 'integer':
-        case 'number':
-        case 'object':
-            return validate[type](v, prefix, schema, value);
-            break;
-        case 'string':
-            switch (schema.format) {
-                case 'binary':
-                case 'byte':
-                case 'date':
-                case 'date-time':
-                    return validate[schema.format](v, prefix, schema, value);
-                    break;
-                case '':
-                case undefined:
-                    return validate.string(v, prefix, schema, value);
-                    break;
-            }
-            break;
+function validate(v, prefix, depth, schema, value) {
+
+    // validate anyOf
+    if (v.options.anyOf && schema.anyOf) {
+        const result = anyOf(v, nestedPrefix(prefix), depth, schema.anyOf, value);
+        if (!result.valid) {
+            v.errors.push(prefix + ': Did not match any of the schemas:\n' + result.errors.join('\n'));
+        }
+
+    // validate oneOf
+    } else if (v.options.oneOf && schema.oneOf) {
+        const result = anyOf(v, nestedPrefix(prefix), depth, schema.oneOf, value);
+        if (result.valid !== 1) {
+            v.errors.push(prefix + ': Did not match exactly one schema. Matched: ' + result.valid + '\n' + result.messages.join('\n'));
+        }
+
+    // validate allOf
+    } else if (v.options.allOf && schema.allOf) {
+        schema.allOf.forEach(schema => validate(v, prefix, depth, schema, value));
+
+    // validate not
+    } else if (v.options.not && schema.not) {
+        not(v, prefix, depth, schema.not, value);
+
+    // type validation
+    } else {
+        const type = util.schemaType(schema);
+        switch (type) {
+            case 'array':
+                validate.array(v, prefix, depth, schema, value);
+                break;
+            case 'boolean':
+            case 'integer':
+            case 'number':
+            case 'object':
+                return validate[type](v, prefix, depth, schema, value);
+                break;
+            case 'string':
+                switch (schema.format) {
+                    case 'binary':
+                    case 'byte':
+                    case 'date':
+                    case 'date-time':
+                        return validate[schema.format](v, prefix, depth, schema, value);
+                        break;
+                    case '':
+                    case undefined:
+                        return validate.string(v, prefix, depth, schema, value);
+                        break;
+                }
+                break;
+        }
     }
+
 }
 
-validate.array = function(v, prefix, schema, value) {
+validate.array = function(v, prefix, depth, schema, value) {
     if (!v.options.array) return;
     if (!Array.isArray(value)) {
         v.errors.push(prefix + ': Expected an array. Received: ' + smart(value))
@@ -80,80 +107,67 @@ validate.array = function(v, prefix, schema, value) {
                 if (!found) singles.push(item);
             });
         }
-        if (v.options.items && schema.items) {
+        if (v.options.items && schema.items && v.options.depth > depth) {
+            const depth1 = depth + 1;
             value.forEach((val, index) => {
-                validate(v, '/' + prefix + '/' + index, schema.items, val);
+                validate(v, '/' + prefix + '/' + index, depth1, schema.items, val);
             });
         }
-        validate.enum(v, prefix, schema, value);
+        _enum(v, prefix, schema, value);
     }
 };
 
-validate.binary = function(v, prefix, schema, value) {
+validate.binary = function(v, prefix, depth, schema, value) {
     if (!v.options.binary) return;
     if (typeof value !== 'string') {
         v.errors.push(prefix + ': Expected a string. Received: ' + smart(value));
     } else {
         if (!is.binary(value)) v.errors.push(prefix + ': Expected a binary string. Received: ' + smart(value));
-        validate.string(v, prefix, schema, value);
+        validate.string(v, prefix, depth, schema, value);
     }
 };
 
-validate.boolean = function(v, prefix, schema, value) {
+validate.boolean = function(v, prefix, depth, schema, value) {
     if (!v.options.boolean) return;
     if (typeof value !== 'boolean') {
         v.errors.push(prefix + ': Expected a boolean. Received: ' + smart(value));
     } else {
-        validate.enum(v, prefix, schema, value);
+        _enum(v, prefix, schema, value);
     }
 };
 
-validate.byte = function(v, prefix, schema, value) {
+validate.byte = function(v, prefix, depth, schema, value) {
     if (!v.options.byte) return;
     if (typeof value !== 'string') {
         v.errors.push(prefix + ': Expected a string. Received: ' + smart(value));
     } else {
         if (!is.byte(value)) v.errors.push(prefix + ': Expected a base64 string. Received: ' + smart(value));
-        validate.string(v, prefix, schema, value);
+        validate.string(v, prefix, depth, schema, value);
     }
 };
 
-validate.date = function(v, prefix, schema, value) {
+validate.date = function(v, prefix, depth, schema, value) {
     if (!v.options.date) return;
     if (typeof value !== 'string' || !is.date(value)) {
         v.errors.push(prefix + ': Expected a full-date string as described by RFC3339 at https://xml2rfc.tools.ietf.org/public/rfc/html/rfc3339.html#anchor14. Received: ' + smart(value));
     } else {
         date('date', v, prefix, schema, value);
-        validate.string(v, prefix, schema, value);
+        validate.string(v, prefix, depth, schema, value);
     }
 };
 
-validate.dateTime = function(v, prefix, schema, value) {
+validate.dateTime = function(v, prefix, depth, schema, value) {
     if (!v.options.dateTime) return;
     if (typeof value !== 'string' || !is.dateTime(value)) {
         v.errors.push(prefix + ': Expected a date-time as described by RFC3339 at https://xml2rfc.tools.ietf.org/public/rfc/html/rfc3339.html#anchor14. Received: ' + smart(value));
     } else if (is.dateTime(value)) {
         date('date-time', v, prefix, schema, value);
-        validate.string(v, prefix, schema, value);
+        validate.string(v, prefix, depth, schema, value);
     }
 };
 validate['date-time'] = validate.dateTime;
 
-validate.enum = function(v, prefix, schema, value) {
-    if (v.options.enum && schema.enum) {
-        const length = schema.enum.length;
-        let found;
-        for (let i = 0; i < length; i++) {
-            if (util.same(value, schema.enum[i])) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) v.errors.push(prefix + ': Value did not meet enum requirements: ' + smart(value));
-    }
-};
-
-validate.integer = function(v, prefix, schema, value) {
+validate.integer = function(v, prefix, depth, schema, value) {
     if (!v.options.integer) return;
     if (isNaN(value) || Math.round(value) !== value || typeof value !== 'number') {
         v.errors.push(prefix + ': Expected an integer. Received: ' + smart(value));
@@ -162,7 +176,7 @@ validate.integer = function(v, prefix, schema, value) {
     }
 };
 
-validate.number = function(v, prefix, schema, value) {
+validate.number = function(v, prefix, depth, schema, value) {
     if (!v.options.number) return;
     if (isNaN(value) || typeof value !== 'number') {
         v.errors.push(prefix + ': Expected a number. Received: ' + smart(value));
@@ -171,41 +185,50 @@ validate.number = function(v, prefix, schema, value) {
     }
 };
 
-// TODO: oneOf and anyOf can use discriminators too
-// TODO: add error messages for missed schemas on oneOf and anyOf
-
-validate.object = function(v, prefix, schema, value) {
+validate.object = function(v, prefix, depth, schema, value) {
     if (!v.options.object) return;
     if (!value || typeof value !== 'object') {
         v.errors.push(prefix + ': Expected a non-null object. Received: ' + smart(value));
     } else {
-        const discriminator = v.options.discriminator && schema.discriminator;
-        const indentLength = rxPrefixSpaces.exec(prefix)[0].length;
-        const nestedPrefix = ' '.repeat(indentLength + 2);
-        if (v.options.anyOf && schema.anyOf) {
-            const result = anyOneOf(v, nestedPrefix, schema.anyOf, value);
-            if (!result.valid) {
-                v.errors.push(prefix + ': Did not match any of the schemas:\n' + result.errors.join('\n'));
-            }
+        discriminate(v, new Map(), [], prefix, schema, value).forEach(schema => {
+            const properties = schema.properties || {};
+            const required = v.options.required && schema.required ? schema.required.concat() : [];
+            const keys = Object.keys(value);
 
-        } else if (v.options.oneOf && schema.oneOf) {
-            const result = anyOneOf(v, nestedPrefix, schema.oneOf, value);
-            if (result.valid !== 1) {
-                v.errors.push(prefix + ': Did not match exactly one schema. Matched: ' + result.valid + '\n' + result.messages.join('\n'));
-            }
+            // validate each property in the value
+            const depth1 = depth + 1;
+            keys.forEach(key => {
+                const index = required.indexOf(key);
+                if (index !== -1) required.splice(index, 1);
 
-        } else if (v.options.allOf && (schema.allOf || discriminator)) {
-            discriminate(v, new Map(), [], prefix, schema, value).forEach(schema => {
-                object(v, prefix, schema, value);
+                if (v.options.depth > depth) {
+                    if (properties.hasOwnProperty(key)) {
+                        if (v.options.properties) validate(v, prefix + '/' + key, depth1, properties[key], value[key]);
+
+                    } else if (v.options.additionalProperties) {
+                        if (schema.additionalProperties === false) {
+                            v.errors.push(prefix + ': Additional properties are not allowed.');
+                        } else if (typeof schema.additionalProperties === 'object') {
+                            validate(v, '/' + prefix + '/' + key, depth1, schema.additionalProperties, value[key]);
+                        }
+                    }
+                }
             });
 
-        } else {
-            object(v, prefix, schema, value);
-        }
+            // validate that all required are present
+            if (v.options.required && required.length > 0) {
+                v.errors.push(prefix + ': One or more required properties missing: ' + required.join(', '));
+            }
+
+            // validate number of properties
+            maxMin(v, prefix, schema, 'object property count', 'maxProperties', 'minProperties', false, keys.length, schema.maxProperties, schema.minProperties);
+
+            _enum(v, prefix, schema, value);
+        });
     }
 };
 
-validate.string = function(v, prefix, schema, value) {
+validate.string = function(v, prefix, depth, schema, value) {
     if (!v.options.string) return;
     const length = value.length;
     if (typeof value !== 'string') {
@@ -220,7 +243,7 @@ validate.string = function(v, prefix, schema, value) {
         if (v.options.pattern && schema.hasOwnProperty('pattern') && !(new RegExp(schema.pattern).test(value))) {
             v.errors.push(prefix + ': String does not match required pattern ' + schema.pattern + ' with value: ' + smart(value));
         }
-        validate.enum(v, prefix, schema, value);
+        _enum(v, prefix, schema, value);
     }
 };
 
@@ -228,7 +251,7 @@ validate.string = function(v, prefix, schema, value) {
 
 
 
-function anyOneOf(v, prefix, schemas, value) {
+function anyOf(v, prefix, depth, schemas, value) {
     // get reference to existing errors and overwrite temporarily
     const errorsRef = v.errors;
     const messages = [];
@@ -240,7 +263,7 @@ function anyOneOf(v, prefix, schemas, value) {
     for (let i = 0; i < length; i++) {
         const schema = schemas[i];
         v.errors = [];
-        validate(v, prefix + '  ', schema, value);
+        validate(v, prefix + '  ', depth, schema, value);
         if (!v.errors.length) {
             valid++;
             messages.push(prefix + 'Schema #' + (i + 1) + ': Valid');
@@ -283,6 +306,20 @@ function date(descriptor, v, prefix, schema, value) {
     maxMin(v, prefix, schema, descriptor, 'maximum', 'minimum', false, dt, new Date(schema.maximum), new Date(schema.minimum));
 }
 
+function _enum(v, prefix, schema, value) {
+    if (v.options.enum && schema.enum) {
+        const length = schema.enum.length;
+        let found;
+        for (let i = 0; i < length; i++) {
+            if (util.same(value, schema.enum[i])) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) v.errors.push(prefix + ': Value did not meet enum requirements: ' + smart(value));
+    }
+}
+
 function discriminate(v, map, allOf, prefix, schema, value) {
 
     // avoid endless loops
@@ -290,7 +327,7 @@ function discriminate(v, map, allOf, prefix, schema, value) {
     if (exists) return exists;
     map.set(schema, true);
 
-    if (schema.allOf) {
+    if (v.options.allOf && schema.allOf) {
         schema.allOf.forEach(schema => {
             discriminate(v, map, allOf, prefix, schema, value);
         });
@@ -298,7 +335,7 @@ function discriminate(v, map, allOf, prefix, schema, value) {
     } else {
         allOf.push(schema);
 
-        if (schema.discriminator) {
+        if (v.options.discriminator && schema.discriminator) {
             const discriminator = v.version.getDiscriminatorSchema(schema, value);
             if (discriminator) {
                 discriminate(v, map, allOf, prefix, discriminator, value);
@@ -310,14 +347,6 @@ function discriminate(v, map, allOf, prefix, schema, value) {
     }
 
     return allOf;
-}
-
-function numerical(descriptor, v, prefix, schema, value) {
-    maxMin(v, prefix, schema, descriptor, 'maximum', 'minimum', true, value, schema.maximum, schema.minimum);
-
-    if (schema.multipleOf && value % schema.multipleOf !== 0) v.errors.push(prefix + ': Expected a multiple of ' + schema.multipleOf + '. Received: ' + smart(value));
-
-    validate.enum(v, prefix, schema, value);
 }
 
 function maxMin(v, prefix, schema, type, maxProperty, minProperty, exclusives, value, maximum, minimum) {
@@ -338,35 +367,26 @@ function maxMin(v, prefix, schema, type, maxProperty, minProperty, exclusives, v
     }
 }
 
-function object(v, prefix, schema, value) {
-    const properties = schema.properties || {};
-    const required = v.options.required && schema.required ? schema.required.concat() : [];
-    const keys = Object.keys(value);
+function nestedPrefix(prefix) {
+    const indentLength = rxPrefixSpaces.exec(prefix)[0].length;
+    return ' '.repeat(indentLength + 2);
+}
 
-    // validate each property in the value
-    keys.forEach(key => {
-        const index = required.indexOf(key);
-        if (index !== -1) required.splice(index, 1);
+function not(v, prefix, depth, schema, value) {
+    const errors = v.errors;
+    v.errors = [];
 
-        if (properties.hasOwnProperty(key)) {
-            if (v.options.properties) validate(v, prefix + '/' + key, properties[key], value[key]);
+    validate(v, prefix, depth, schema, value);
+    const noErrors = !v.errors.length;
+    v.errors = errors;
 
-        } else if (v.options.additionalProperties) {
-            if (schema.additionalProperties === false) {
-                v.errors.push(prefix + ': Additional properties are not allowed.');
-            } else if (typeof schema.additionalProperties === 'object') {
-                validate(v, '/' + prefix + '/' + key, schema.additionalProperties, value[key]);
-            }
-        }
-    });
+    if (noErrors) v.errors.push(prefix + ': Should not pass schema.');
+}
 
-    // validate that all required are present
-    if (v.options.required && required.length > 0) {
-        v.errors.push(prefix + ': One or more required properties missing: ' + required.join(', '));
-    }
+function numerical(descriptor, v, prefix, schema, value) {
+    maxMin(v, prefix, schema, descriptor, 'maximum', 'minimum', true, value, schema.maximum, schema.minimum);
 
-    // validate number of properties
-    maxMin(v, prefix, schema, 'object property count', 'maxProperties', 'minProperties', false, keys.length, schema.maxProperties, schema.minProperties);
+    if (schema.multipleOf && value % schema.multipleOf !== 0) v.errors.push(prefix + ': Expected a multiple of ' + schema.multipleOf + '. Received: ' + smart(value));
 
-    validate.enum(v, prefix, schema, value);
+    _enum(v, prefix, schema, value);
 }
