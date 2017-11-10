@@ -91,7 +91,7 @@ Version.defaults = {
     },
 
     validate: {
-        depth: -1,              // validate to full depth
+        depth: Number.MAX_VALUE,// validate to full depth
 
         boolean: true,
 
