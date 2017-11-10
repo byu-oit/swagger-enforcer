@@ -16,7 +16,6 @@
  **/
 'use strict';
 const multipart = require('../multipart-parser');
-const util      = require('../util');
 const validate  = require('../validate');
 
 module.exports = Version;
@@ -47,36 +46,10 @@ Version.prototype.getDiscriminatorSchema = function(schema, value) {
 
 Version.defaults = {
 
-    enforce: {
-        // numbers
-        multipleOf: true,
-        maximum: true,
-        minimum: true,
-
-        // strings
-        maxLength: true,
-        minLength: true,
-        pattern: true,
-
-        // arrays
-        maxItems: true,
-        minItems: false,        // defaults to false because you're likely building the array and the initial number of items may be too low
-        uniqueItems: true,
-
-        // objects
-        additionalProperties: true,
-        maxProperties: true,
-        minProperties: false,   // defaults to false because you're likely building the object and the initial number of properties may be too low
-        required: false,        // defaults to false because as you're building you may not have added all properties
-
-        // general
-        enum: true
-    },
-
     populate: {
         allOf: true,
-        autoFormat: false,      // setting this value to true may hide some errors as values are auto formatted to their correct type
-        copy: false,            // mode can be either copy or mutate. Mutate is faster but copy preserves the original object
+        autoFormat: false,          // setting this value to true may hide some errors as values are auto formatted to their correct type
+        copy: false,                // mode can be either copy or mutate. Mutate is faster but copy preserves the original object
         defaults: true,
         defaultsUseParams: true,
         ignoreMissingRequired: true,
@@ -86,12 +59,12 @@ Version.defaults = {
     },
 
     request: {
-        purge: true,            // any provided request data (in query or form data) that is not specified in the swagger will be ignored
-        strict: true            // the request can only supply data (in query or form data) in the spec or an error is thrown
+        purge: true,                // any provided request data (in query or form data) that is not specified in the swagger will be ignored
+        strict: true                // the request can only supply data (in query or form data) in the spec or an error is thrown
     },
 
     validate: {
-        depth: Number.MAX_VALUE,// validate to full depth
+        depth: Number.MAX_VALUE,    // validate to full depth
 
         boolean: true,
 

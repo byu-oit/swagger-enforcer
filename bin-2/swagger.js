@@ -123,19 +123,8 @@ SwaggerEnforcer.prototype.errors = function(schema, value) {
         options: data.defaults.validate,
         version: version
     };
-    validate(v, '<root>', schema, value);
+    validate(v, '<root>', 0, schema, value);
     return v.errors.length > 0 ? v.errors : null;
-};
-
-/**
- * Create an object that uses JavaScript proxies to enforce that an object is built correctly. Requires NodeJS 6.x and newer.
- * @param {object} schema The schema to enforce.
- * @param {object} [options={}] Describe what should be enforced.
- * @param {*} [initialValue] The initial value to build the enforced object from.
- * @returns {object|array}
- */
-SwaggerEnforcer.prototype.enforce = function(schema, options, initialValue) {
-
 };
 
 /**
@@ -233,7 +222,7 @@ SwaggerEnforcer.prototype.populate = function(schema, map, initialValue) {
     // produce start value
     const value = v.options.copy && initialValueProvided
         ? util.copy(initialValue)
-        : initialValue;//('array' ? [] : {});
+        : initialValue;
 
     // begin population
     const root = { root: value };
@@ -422,15 +411,6 @@ SwaggerEnforcer.prototype.validate = function(schema, value) {
 
 
 SwaggerEnforcer.is = require('./is');
-
-/**
- * Take an enforced array or object and create an unenforced copy.
- * @param {object|array} enforcedValue
- * @returns {object|array}
- */
-SwaggerEnforcer.unenforce = function(enforcedValue) {
-
-};
 
 /**
  * Parse query string into object mapped to array of values.
