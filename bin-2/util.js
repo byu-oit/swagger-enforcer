@@ -143,6 +143,7 @@ exports.schemaFormat = function(schema) {
  */
 exports.smart = function(value) {
     if (typeof value === 'string') return "'" + value.replace(/'/g, "\\'") + "'";
+    if (value instanceof Date) return value.toISOString();
     return value;
 };
 
