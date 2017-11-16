@@ -24,7 +24,7 @@ const validate      = require('./validate');
 module.exports = SwaggerEnforcer;
 
 const store = new WeakMap();
-const rxPathParam = /{([\s\S]+?)}/;
+const rxPathParam = /{([^}]+)}/;
 
 /**
  * Produce a swagger instance.
@@ -63,41 +63,75 @@ function SwaggerEnforcer(definition, defaultOptions) {
         });
 
     // build path parser functions
-    const pathParsers = [];
+    const pathParsers = { statics: {}, dynamics: [] };
     if (!definition.paths || typeof definition.paths !== 'object') definition.paths = {};
     Object.keys(definition.paths)
         .forEach(path => {
-            const names = [];
-            const rx = new RegExp('^/' +
-                util.edgeSlashes(path, false, false)
-                    .split('/')
-                    .map(partial => {
-                        const match = rxPathParam.exec(partial);
-                        if (match) {
-                            names.push(match[1]);
-                            return '([^\\/]+?)'
-                        } else {
-                            return partial;
-                        }
-                    })
-                    .join('/') +
-                '$');
-
-            pathParsers.push({
+            const about = {
                 definition: definition.paths[path],
-                path: path,
-                parse: function(str) {
+                path: path
+            };
+            const parameterNames = [];
+
+            // if no parameters then store as a static path
+            if (!rxPathParam.test(path)) {
+                pathParsers.statics[path] = about;
+
+            // analyze the dynamic path and prep for parsing of actual paths
+            } else {
+
+                // build search regular expression
+                const rxFind = /{([^}]+)}/g;
+                let match;
+                let rxStr = '';
+                let offset = 0;
+                while (match = rxFind.exec(path)) {
+                    console.log(match);
+                    rxStr += path.substring(offset, match.index) + '([\\s\\S]+?)';
+                    offset = match.index + match[0].length;
+                }
+                rxStr += path.substr(offset);
+                const rx = new RegExp('^' + rxStr + '$');
+
+                // determine static path percentage
+                const pathParts = path.split('/');
+                const pathLength = pathParts.length;
+                pathParts.shift();
+                const total = pathParts
+                    .map(v => {
+                        const rx = /{([^}]+)}/g;
+                        let statics = 0;
+                        let params = 0;
+                        let offset = 0;
+                        let match;
+                        while (match = rx.exec(v)) {
+                            if (match.index > offset) statics++;
+                            params++;
+                            offset = match.index + match[0].length;
+                        }
+                        if (offset < v.length) statics++;
+                        return statics / (statics + params);
+                    })
+                    .reduce((prev, curr) => prev + curr, 0);
+                about.weight = total / pathLength;
+
+                // add the parse function
+                about.parse = str => {
                     str = util.edgeSlashes(str, true, false);
 
                     const match = rx.exec(str);
                     if (!match) return undefined;
 
                     const params = {};
-                    names.forEach((name, index) => params[name] = match[index + 1]);
+                    parameterNames.forEach((name, index) => params[name] = match[index + 1]);
                     return params;
-                }
-            });
+                };
+
+                if (!pathParsers.dynamics[pathLength]) pathParsers.dynamics[pathLength] = [];
+                pathParsers.dynamics[pathLength].push(about);
+            }
         });
+    pathParsers.dynamics.sort((a, b) => a.weight < b.weight ? -1 : 1);
 
     // store protected properties
     store.set(this, {
@@ -119,11 +153,12 @@ SwaggerEnforcer.prototype.errors = function(schema, value) {
     const version = data.version;
     const v = {
         definition: data.definition,
+        error: (prefix, message) => v.errors.push((prefix ? prefix + ': ' : '') + message),
         errors: [],
         options: data.defaults.validate,
         version: version
     };
-    validate(v, '<root>', 0, schema, value);
+    validate(v, '', 0, schema, value);
     return v.errors.length > 0 ? v.errors : null;
 };
 
@@ -173,29 +208,61 @@ SwaggerEnforcer.prototype.format = function(value, schema) {
     }
 };
 
+SwaggerEnforcer.prototype.middleware = function(options) {
+    const swagger = this;
+    return function(req, res, next) {
+        // parse the incoming request
+        const data = swagger.path(req.path);
+
+        // overwrite the send method to validate the response prior to sending
+        /*const send = res.send;
+        res.send = function(status, body) {
+            const errors = swagger.errors(schema, body);
+            send.apply(send, arguments);
+        };*/
+
+        req.swagger = swagger;
+    }
+};
+
 /**
  * Get details about the matching path.
  * @param {string} path
- * @param {string} [subPath]
  * @returns {{path: string, params: Object.<string, *>, schema: object}|undefined}
  */
-SwaggerEnforcer.prototype.path = function(path, subPath) {
+SwaggerEnforcer.prototype.path = function(path) {
     const parsers = store.get(this).pathParsers;
 
     // normalize path
     if (!path) path = '';
-    path = util.edgeSlashes(path, true, true);
+    path = util.edgeSlashes(path, true, false);
 
-    const length = parsers.length;
-    for (let i = 0; i < length; i++) {
-        const parser = parsers[i];
-        const params = parser.parse(path);
-        if (params) return {
-            params: params,
-            path: parser.path,
-            schema: subPath ? this.schema(subPath, parser.definition) : util.copy(parser.definition)
-        };
+    // check for static path match - simple key lookup
+    const staticPath = parsers.statics[path];
+    if (staticPath) {
+        return {
+            params: {},
+            path: staticPath.path,
+            schema: util.copy(staticPath.definition)
+        }
+
+    // process dynamic path matches - test each regular expression
+    } else {
+        const pathLength = path.split('/').length - 1;
+
+        const dynamics = parsers.dynamics;
+        const length = dynamics.length;
+        for (let i = 0; i < length; i++) {
+            const parser = dynamics[i];
+            const params = parser.parse(path);
+            if (params) return {
+                params: params,
+                path: parser.path,
+                schema: util.copy(parser.definition)
+            };
+        }
     }
+
 };
 
 /**
