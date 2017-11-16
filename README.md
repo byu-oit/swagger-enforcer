@@ -1,6 +1,301 @@
 [![Build Status](https://travis-ci.org/byu-oit/swagger-enforcer.svg?branch=master)](https://travis-ci.org/byu-oit/swagger-enforcer)
 [![Coverage Status](https://coveralls.io/repos/github/byu-oit/swagger-enforcer/badge.svg?branch=master)](https://coveralls.io/github/byu-oit/swagger-enforcer?branch=master)
 
+# OpenAPI-Enforcer
+
+**Supports OpenAPI 2.0 (formerly Swagger) and OpenAPI 3.0.0**
+
+Features
+
+- Connect middleware*
+- Request parsing and validating*
+- Response building, formatting, and validating*
+- Schema validation
+
+\* *Some features coming soon*
+
+## Table of Contents
+
+- [Examples](#examples)
+
+## Examples
+
+[Table of Contents](#table-of-contents)
+
+- [Primitive schema error report](#example-primitive-schema-error-report)
+- [Complex schema error report](#example-complex-schema-error-report)
+- [Complex schema validate](#example-complex-schema-validate)
+- [Request Parsing](#example-request-parsing)
+- [Response Building](#example-response-building)
+- [Connect Middleware](#example-connect-middleware)
+
+### Example: Primitive schema error report
+
+
+
+[Back to Examples](#examples)
+
+### Example: Complex schema validate
+
+```js
+const Swagger = require('../index');
+
+const swagger = new Swagger({ openapi: '3.0.0' });
+
+const schema = {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+        names: {
+            type: 'array',
+            items: {
+                type: 'string',
+                minLength: 1
+            }
+        },
+        date: {
+            type: 'string',
+            format: 'date-time',
+            maximum: '2000-01-01T00:00:00.000Z'
+        }
+    }
+};
+
+swagger.validate(schema, {
+    names: [ 'Bob', 'Jan', '' ],
+    date: '2010-01-01T00:00:00.000Z',
+    num: 8
+});
+
+/*
+OUTPUT:
+
+Error: One or more errors found during schema validation: 
+  /names/2: String length below minimum length of 1 with length of 0: ''
+  /date: Expected date-time to be less than or equal to 2000-01-01T00:00:00.000Z. Received: 2010-01-01T00:00:00.000Z
+  /num: Property not allowed
+    at ...
+*/
+```
+
+[Back to Examples](#examples)
+
+# API
+
+## new Enforcer ( definition ) 
+
+Create an OpenAPI enforcer instance.
+
+| Parameter | Description | Type | Default |
+| --------- | ----------- | ---- | ------- |
+| definition | An openapi document or a string representing the version to use. | `string` or `object` | | 
+
+Returns: An instance of the OpenAPI Enforcer
+
+**Example 1 - String Parameter**
+
+```js
+const Enforcer = require('openapi-enforcer');
+const enforcer = new Enforcer('2.0');   // create an enforcer for OpenAPI version 2.0
+```
+
+**Example 2 - Object Parameter**
+
+```js
+const Enforcer = require('openapi-enforcer');
+const enforcer = new Enforcer({ openapi: '3.0.0' });   // create an enforcer for OpenAPI version 3.0.0
+```
+
+## enforcer.errors ( schema, value )
+
+Validate a value against a schema and receive a detailed report where errors exist and why.
+
+| Parameter | Description | Type | Default |
+| --------- | ----------- | ---- | ------- |
+| schema | The schema to validate the value against. | `object` | |
+| value | The value to validate. | Any | |
+
+Returns: An array of strings where each item in the array describes one error that was encountered.
+
+```js
+const Enforcer = require('openapi-enforcer');
+
+// create the enforcer instance
+const enforcer = new Enforcer({ openapi: '3.0.0' });
+
+// define a schema to validate values against
+const schema = {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+        names: {
+            type: 'array',
+            items: {
+                type: 'string',
+                minLength: 1
+            }
+        },
+        date: {
+            type: 'string',
+            format: 'date-time',
+            maximum: '2000-01-01T00:00:00.000Z'
+        }
+    }
+};
+
+// get any errors and log to console
+const errors = enforcer.errors(schema, {
+    names: [ 'Bob', 'Jan', '' ],
+    date: '2010-01-01T00:00:00.000Z',
+    num: 8
+});
+// errors ==> [
+//   /names/2: String length below minimum length of 1 with length of 0: ''
+//   /date: Expected date-time to be less than or equal to 2000-01-01T00:00:00.000Z. Received: 2010-01-01T00:00:00.000Z
+//   /num: Property not allowed
+// ]
+```
+
+## enforcer.format ( schema, value )
+
+Format a value to match the schema. This works for primitives, arrays, and objects. Arrays and objects will be traversed and their values also formatted recursively.
+
+| Parameter | Description | Type | Default |
+| --------- | ----------- | ---- | ------- |
+| schema | The schema to format to. | `object` | |
+| value | The value to format. | Any | |
+
+Returns: The formatted value.
+
+Can format:
+
+- arrays and objects recursively
+- binary from boolean, number, string, or Buffer
+- boolean from any value
+- byte from boolean, number, string, or Buffer
+- date from Date, string, or number
+- date-time from Date, string, or number
+- integer from anything that !isNaN(value)
+- number from anything that !isNaN(value)
+- string from string, number, boolean, object, or Date
+
+```js
+const Enforcer = require('openapi-enforcer');
+const enforcer = new Enforcer('3.0.0');
+
+const schema = {
+    type: 'object',
+    properties: {
+        time: {
+            type: 'string',
+            format: 'date-time'
+        },
+        public: {
+            type: 'boolean'
+        },
+        seatsAvailable: {
+            type: 'integer'
+        }
+    }
+};
+
+const value = enforcer.format(schema, {
+    time: new Date(2000, 0, 1, 11), // formatted to ISO Date
+    public: 1,                      // formatted to true
+    seatsAvailable: 23.7            // formatted to integer
+});
+// value ==> {
+//   startTime: '2000-01-01T11:00:00.000Z',
+//   public: true,
+//   seatsAvailable: 24
+// }
+```
+
+## enforcer.populate ( schema, params [, value ] )
+
+Build a value from a schema. While traversing the schema the final populated value may be derived from the provided value in combination with the schema's `default` value, the `x-template` value, or the `x-variable` value.
+
+| Parameter | Description | Type | Default |
+| --------- | ----------- | ---- | ------- |
+| schema | The schema to build from | `object` | |
+| params | A map of keys to values. These values are used to help build the final value | `object` | |
+| value | An initial value to start with. | Any | |
+
+Returns: The populated value.
+
+### What you need to know about default, x-template, and x-variable
+
+The `default` attribute is part of the OpenAPI specification. The type of it's value must be the same as the schema type. For example, if the schema is of type string, default cannot be a number. When `default` is a string [it can behave](#) like `x-template` and substitute parameters into the string. The advantage of using `default` over `x-template` in this scenario is that the `default` value will often appear in OpenAPI documentation generators.
+
+The `x-template` value must be a string that will have parameter replacement occur on it. Parameters in the string may use handlebars, double handlebars, or colons depending on how the Enforcer instance has been [configured](#).
+
+The `x-variable` will perform value substitution only.
+
+If a conflict arises between the provided value, `default`, `x-template`, or `x-variable` then the following priority is observed:
+
+1. The provided value
+2. `x-variable`
+3. `x-template`
+4. `default`
+
+```js
+const Enforcer = require('openapi-enforcer');
+const enforcer = new Enforcer('3.0.0');
+
+const schema = {
+    type: 'object',
+    properties: {
+        firstName: {
+            type: 'string',
+            'x-variable': 'firstName'
+        },
+        lastName: {
+            type: 'string',
+            'x-variable': 'lastName'
+        },
+        fullName: {
+            type: 'string',
+            'x-template': '{firstName} {lastName}'
+        },
+        profileUrl: {
+            type: 'string',
+            default: 'https://your-domain.com/users/{id}'
+        }
+    }
+};
+
+const params = {
+    id: 12345,
+    firstName: 'Jan',
+    lastName: 'Smith'
+}
+
+const value = enforcer.populate(schema, params);
+// value ==> {
+//   firstName: 'Jan',
+//   lastName: 'Smith',
+//   fullName: 'Jan Smith',
+//   profileUrl: 'https://your-domain.com/users/12345'
+// }
+```
+
+## enforcer.validate ( schema, value )
+
+Validate that the value adheres to the schema or throw an `Error`. This function calls [`enforcer.errors`](#) and if any errors occur then it packages them into a single `Error` instance and throws the `Error`.
+
+| Parameter | Description | Type | Default |
+| --------- | ----------- | ---- | ------- |
+| schema | The schema to build from | `object` | |
+| params | A map of keys to values. These values are used to help build the final value | `object` | |
+| value | An initial value to start with. | Any | |
+
+Returns: Nothing.
+
+
+
+# OLD DOCS
+
+
 ```js
 const SwaggerEnforcer   = require('swagger-enforcer');
 
@@ -33,6 +328,10 @@ function tryRequire(path) {
         throw err;
     }
 }
+```
+
+```js
+const result = process.env.NODE_ENV === 'development' ? swagger.enforce(schema) : swagger.populate(schema);
 ```
 
 
