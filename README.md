@@ -17,12 +17,12 @@ Features
 # Table of Contents
 
 - [API](#api)
-    - [new Enforcer](#)
+    - [new Enforcer](#new-enforcer--definition--options--)
         - [options](#options)
-    - [enforcer.errors](#)
-    - [enforcer.format](#)
-    - [enforcer.populate](#)
-    - [enforcer.validate](#)
+    - [enforcer.errors](#enforcererrors--schema-value-)
+    - [enforcer.format](#enforcerformat--schema-value-)
+    - [enforcer.populate](#enforcerpopulate--schema-params--value--)
+    - [enforcer.validate](#enforcervalidate--schema-value-)
 
 # API
 
@@ -81,13 +81,13 @@ const options = {
 
 #### options.populate.autoFormat
 
-If set to `true` then values will automatically be [formatted](#) while populating.
+If set to `true` then values will automatically be [formatted](#enforcerformat--schema-value-) while populating.
 
 Default: `false` 
 
 #### options.populate.copy
 
-When executing [`enforcer.populate(schema, params [, initialValue ])`](#) and providing an `initialValue` you have the option to either mutate (modify) that value or to create a copy of the value and mutate that. Mutation is faster, but if you do not want to change the passed in `initialValue` then you should set this value to `true`. 
+When executing [`enforcer.populate(schema, params [, initialValue ])`](#enforcerpopulate--schema-params--value--) and providing an `initialValue` you have the option to either mutate (modify) that value or to create a copy of the value and mutate that. Mutation is faster, but if you do not want to change the passed in `initialValue` then you should set this value to `true`. 
 
 Default: `false`
 
@@ -95,19 +95,19 @@ Default: `false`
 
 Allow populated values to be built from a schema's `default` value. 
 
-[More about default, x-template, and x-variable](#).
+[More about default, x-template, and x-variable](#about-default-x-template-and-x-variable).
 
 Default: `true`
 
 #### options.populate.ignoreMissingRequired
 
-When executing [`enforcer.populate(schema, params [, initialValue ])`](#) there will be times where an object with required properties is missing values for those required properties. If this value is set to `false` then [`enforcer.populate`](#) will not add the object to the populated value. If set to `true` then partially completed objects will still be added to the populated value.
+When executing [`enforcer.populate(schema, params [, initialValue ])`](#enforcerpopulate--schema-params--value--) there will be times where an object with required properties is missing values for those required properties. If this value is set to `false` then [`enforcer.populate`](#enforcerpopulate--schema-params--value--) will not add the object to the populated value. If set to `true` then partially completed objects will still be added to the populated value.
 
 Default: `true`
 
 #### options.populate.replacement
 
-The template [parameter replacement](#) format to use. This can be one of `'handlebar'`, `'doubleHandlebar'`, or `'colon'`. 
+The template [parameter replacement](#parameter-replacement) format to use. This can be one of `'handlebar'`, `'doubleHandlebar'`, or `'colon'`. 
 
 | Format | Example |
 | ------ | ------- |
@@ -125,7 +125,7 @@ If this is set to `true` and a default is being use to populate a value and the 
 
 Allow populated values to be built from a schema's `x-template` value. 
 
-[More about default, x-template, and x-variable](#).
+[More about default, x-template, and x-variable](#about-default-x-template-and-x-variable).
 
 Default: `true`
 
@@ -133,7 +133,7 @@ Default: `true`
 
 Allow populated values to be built from a schema's `x-variable` value. 
 
-[More about default, x-template, and x-variable](#).
+[More about default, x-template, and x-variable](#about-default-x-template-and-x-variable).
 
 Default: `true`
 
@@ -258,7 +258,7 @@ Returns: The populated value.
 
 The `default` attribute is part of the OpenAPI specification. The type of it's value must be the same as the schema type. For example, if the schema is of type string, default cannot be a number. When `default` is a string [it can behave](#options-populate-templatedefaults) like `x-template` and [substitute parameters](#parameter-replacement) into the string. The advantage of using `default` over `x-template` in this scenario is that the `default` value will often appear in OpenAPI documentation generators.
 
-The `x-template` value must be a string that will have [parameter replacement](#parameter-replacement) occur on it. Parameters in the string may use handlebars, double handlebars, or colons depending on how the Enforcer instance has been [configured](#).
+The `x-template` value must be a string that will have [parameter replacement](#parameter-replacement) occur on it. Parameters in the string may use handlebars, double handlebars, or colons depending on how the Enforcer instance has been [configured](#optionspopulatereplacement).
 
 The `x-variable` will perform value substitution only.
 
@@ -370,7 +370,7 @@ Parameter replacement is when part of a string is populated with parameters. Thi
 
 ## enforcer.validate ( schema, value )
 
-Validate that the value adheres to the schema or throw an `Error`. This function calls [`enforcer.errors`](#) and if any errors occur then it packages them into a single `Error` instance and throws the `Error`.
+Validate that the value adheres to the schema or throw an `Error`. This function calls [`enforcer.errors`](#enforcererrors--schema-value-) and if any errors occur then it packages them into a single `Error` instance and throws the `Error`.
 
 | Parameter | Description | Type |
 | --------- | ----------- | ---- |
