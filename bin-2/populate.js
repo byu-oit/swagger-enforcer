@@ -50,7 +50,7 @@ exports.populate = function(v, prefix, schema, object, property) {
         }
 
         // if allOf then apply each item
-        if (options.allOf && schema.allOf) {
+        if (schema.allOf) {
             schema.allOf.forEach(schema => exports.populate(v, prefix, schema, object, property));
 
         // populate oneOf as described by the discriminator
@@ -126,7 +126,7 @@ function apply(v, schema, type, object, property) {
 
         } else if (options.defaults && schema.hasOwnProperty('default')) {
             const value = schema.default;
-            object[property] = options.defaultsUseParams && typeof value === 'string'
+            object[property] = options.templateDefaults && typeof value === 'string'
                 ? v.injector(value, map)
                 : value;
         }
