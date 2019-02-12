@@ -1,6 +1,8 @@
 [![Build Status](https://travis-ci.org/byu-oit/swagger-enforcer.svg?branch=master)](https://travis-ci.org/byu-oit/swagger-enforcer)
 [![Coverage Status](https://coveralls.io/repos/github/byu-oit/swagger-enforcer/badge.svg?branch=master)](https://coveralls.io/github/byu-oit/swagger-enforcer?branch=master)
 
+**THIS PROJECT HAS BEEN DEPRECATED IN FAVOR OF [OPENAPI-ENFORCER](https://www.npmjs.com/package/openapi-enforcer) AND [OPENAPI-ENFORCER-MIDDLEWARE](https://www.npmjs.com/package/openapi-enforcer-middleware) THAT PROVIDE BETTER TOOLS, CUSTOMIZABILITY, AND SUPPORTS THE OPEN API SPECIFICATION VERSIONS 2 AND 3.**
+
 # Swagger-Enforcer
 
 Automatically validate a value against the swagger schema while you build it. Alternatively you can validate the final value.
